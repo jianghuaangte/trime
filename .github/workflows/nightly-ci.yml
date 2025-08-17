@@ -52,7 +52,20 @@ jobs:
           keyAlias=${{ secrets.ALIAS }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           EOF
-
+          
+      - name: Download 092wb private branch
+        run: |
+          pwd
+          rm -rf app/src/main/assets/shared/*
+          wget https://github.com/mlzzz/092wb/archive/refs/heads/private.zip -O 092wb.zip
+          unzip 092wb.zip -d app/src/main/assets/shared/
+          mv app/src/main/assets/shared/092wb-private/* app/src/main/assets/shared/
+          cp -r theme/* app/src/main/assets/shared/
+          rm -rf app/src/main/assets/shared/092wb-private/
+          rm -rf app/src/main/assets/shared/{.git,recipes/,.gitignore,README.md,squirrel.yaml,weasel.yaml}
+          echo "列出所有文件："
+          ls app/src/main/assets/shared/
+          
       - name: Build Trime
         run: make release
 
