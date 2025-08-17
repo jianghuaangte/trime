@@ -93,7 +93,7 @@ object DataManager {
                         ResourceUtils.copyFile(it.path, destPath)
 
                         val defaultDestPath = File(defaultDataDir, it.path).apply { parentFile?.mkdirs() }
-                        ResourceUtils.copyFile(it.path, defaultDestPath)
+                        ResourceUtils.copyFile(it.path, defaultDestPath.absolutePath)
                     }
                     is DataDiff.DeleteDir,
                     is DataDiff.DeleteFile,
