@@ -89,11 +89,8 @@ object DataManager {
                     is DataDiff.CreateFile,
                     is DataDiff.UpdateFile,
                     -> {
-                        val destPath = sharedDataDir.resolveSibling(it.path).absolutePath
+                        val destPath = File(defaultDataDir, it.path).absolutePath
                         ResourceUtils.copyFile(it.path, destPath)
-
-                        val defaultDestPath = File(defaultDataDir, it.path).apply { parentFile?.mkdirs() }
-                        ResourceUtils.copyFile(it.path, defaultDestPath.absolutePath)
                     }
                     is DataDiff.DeleteDir,
                     is DataDiff.DeleteFile,
