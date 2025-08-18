@@ -89,7 +89,8 @@ object DataManager {
                     is DataDiff.CreateFile,
                     is DataDiff.UpdateFile,
                     -> {
-                        val destPath = File(defaultDataDir, it.path).absolutePath
+                        val relativePath = it.path.removePrefix("shared/")
+                        val destPath = File(defaultDataDir, relativePath).absolutePath
                         ResourceUtils.copyFile(it.path, destPath)
                     }
                     is DataDiff.DeleteDir,
