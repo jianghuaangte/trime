@@ -142,6 +142,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
             android:key="custom_sound_effect_name"
             android:title="@string/custom_sound_effect_name"
             android:dependency="custom_sound_effect_enabled"
+            android:defaultValue="irime_dot"
             app:iconSpaceReserved="false"
             app:useSimpleSummaryProvider="true" />
         <com.osfans.trime.ui.components.DialogSeekBarPreference
