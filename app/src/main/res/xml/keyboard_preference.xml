@@ -58,7 +58,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
         app:iconSpaceReserved="false"
         app:title="@string/quick_bar">
         <SwitchPreferenceCompat
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:key="keyboard__soft_cursor"
             android:title="@string/keyboard__soft_cursor_title"
             app:iconSpaceReserved="false" />
