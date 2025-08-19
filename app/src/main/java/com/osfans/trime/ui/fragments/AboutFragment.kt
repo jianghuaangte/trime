@@ -32,7 +32,7 @@ class AboutFragment : PaddingPreferenceFragment() {
                 intent =
                     Intent(
                         Intent.ACTION_VIEW,
-                        Uri.parse("${Const.GIT_REPO}/commits/${Const.BUILD_COMMIT_HASH}"),
+                        Uri.parse("https://github.com/osfans/trime"),
                     )
             }
             get<Preference>("about__build_info")?.apply {

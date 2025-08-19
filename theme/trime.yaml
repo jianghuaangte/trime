@@ -159,6 +159,7 @@ preset_color_schemes:
     shadow_color: 0x000000 #按鍵文字陰影
     text_color: 0x5a676e #編碼
     text_back_color: 0xcce4e7e9 #編碼區背景
+    sound: irime_dot
 
   aqua:
     name: 碧水／Aqua
