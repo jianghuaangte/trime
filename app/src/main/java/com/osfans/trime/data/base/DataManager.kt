@@ -109,7 +109,8 @@ object DataManager {
                     defaultCustom.writeText(
                         """
                         patch:
-                            schema_list: []
+                          schema_list:
+                            - {schema: 092wb}
                         """.trimIndent(),
                     )
                 }
