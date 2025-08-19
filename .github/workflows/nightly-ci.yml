@@ -5,6 +5,9 @@
 name: Nightly
 on:
   workflow_dispatch:
+  push:               # 提交代码时触发
+    branches:
+      - develop       # 也可以添加其他分支
   schedule:
     - cron: '0 16 * * *' # UTC 16:00 / GMT+8 0:00, daily
 
