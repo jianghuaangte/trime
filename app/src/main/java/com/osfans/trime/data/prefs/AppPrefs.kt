@@ -110,7 +110,7 @@ class AppPrefs(
             const val COMPOSING_TEXT_MODE = "composing_text_mode"
         }
 
-        val composingTextMode = enum(R.string.composing_text_mode, COMPOSING_TEXT_MODE, ComposingTextMode.DISABLE)
+        val composingTextMode = enum(R.string.composing_text_mode, COMPOSING_TEXT_MODE, ComposingTextMode.PREEDIT)
     }
 
     /**
