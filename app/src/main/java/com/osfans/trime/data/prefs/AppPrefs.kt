@@ -179,7 +179,7 @@ class AppPrefs(
 
         val soundOnKeyPress = bool(SOUND_ON_KEYPRESS, false)
         val soundEffectEnabled = bool(SOUND_EFFECT_ENABLED, false)
-        val customSoundEffect = string(CUSTOM_SOUND_EFFECT, "")
+        val customSoundEffect = string(CUSTOM_SOUND_EFFECT, "irime_dot")
         val soundVolume = int(KEY_SOUND_VALUE, 100)
         val vibrateOnKeyPress = bool(VIBRATE_ON_KEYPRESS, false)
         val vibrationDuration = int(VIBRATION_DURATION, 10)
