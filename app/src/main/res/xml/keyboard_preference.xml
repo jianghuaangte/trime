@@ -130,11 +130,13 @@ SPDX-License-Identifier: GPL-3.0-or-later
         <SwitchPreferenceCompat
             android:key="sound_on_keypress"
             android:title="@string/sound_on_keypress"
+            android:defaultValue="true"
             app:iconSpaceReserved="false" />
         <SwitchPreferenceCompat
             android:key="custom_sound_effect_enabled"
             android:title="@string/custom_sound_effect_enabled"
             android:dependency="sound_on_keypress"
+            android:defaultValue="true"
             app:iconSpaceReserved="false" />
         <Preference
             android:key="custom_sound_effect_name"

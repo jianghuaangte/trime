@@ -8,8 +8,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 <resources xmlns:xliff="urn:oasis:names:en:xliff:document:1.2">
     <!-- Input Method Platform Tittle  -->
-    <string name="app_name_release">Trime</string>
-    <string name="app_name_debug">Trime (Debug)</string>
+    <string name="app_name_release">092wb</string>
+    <string name="app_name_debug">092wb (Debug)</string>
     <!-- Preference settings -->
     <string name="settings__help_title">Help</string>
     <string name="pref_wiki">Wiki</string>
@@ -28,7 +28,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="pref_credits">Contribute</string>
     <string name="about__product_prime">Win10 PRIME Platform</string>
     <string name="about__privacy_policy">Privacy Policy</string>
-    <string name="about__build_info_format">Builder: %1$s\nGit Repo: %2$s\nBuild Git Hash: %3$s\nBuild Time: %4$s</string>
+    <string name="about__build_info_format">Builder: %1$s\nGit Repo: https://github.com/osfans/trime\nBuild Git Hash: 2e86e6f15f2ab431efb29044a3ab54d1751b6ede\nBuild Time: %4$s</string>
     <string name="selected_theme">Themes</string>
     <string name="selected_theme_summary">Select desired theme</string>
     <string name="normal_mode_color">Colors</string>

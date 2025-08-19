@@ -154,7 +154,7 @@ class AppPrefs(
             const val REPEAT_INTERVAL = "keyboard__key_repeat_interval"
         }
 
-        val softCursorEnabled = bool(SOFT_CURSOR_ENABLED, true)
+        val softCursorEnabled = bool(SOFT_CURSOR_ENABLED, false)
         val popupKeyPressEnabled = bool(POPUP_KEY_PRESS_ENABLED, false)
         val hideQuickBar = bool(HIDE_QUICK_BAR, false)
 

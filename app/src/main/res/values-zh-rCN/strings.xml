@@ -8,8 +8,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <!-- 输入法平台名称  -->
-    <string name="app_name_release">同文输入法</string>
-    <string name="app_name_debug">同文输入法（调试）</string>
+    <string name="app_name_release">092五笔</string>
+    <string name="app_name_debug">092五笔（调试）</string>
     <string name="settings__help_title">寻求帮助</string>
     <string name="pref_wiki">维基教程</string>
     <string name="pref_issues">问题反馈</string>
@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="pref_credits">贡献代码</string>
     <string name="about__product_prime">微软平台PRIME输入法</string>
     <string name="about__privacy_policy">隐私策略</string>
-    <string name="about__build_info_format">构建者：%1$s\nGit 仓库：%2$s\n构建 Git 哈希：%3$s\n构建时间：%4$s</string>
+    <string name="about__build_info_format">构建者：%1$s\nGit 仓库：https://github.com/osfans/trime\n构建 Git 哈希：2e86e6f15f2ab431efb29044a3ab54d1751b6ede\n构建时间：%4$s</string>
     <string name="selected_theme">主题</string>
     <string name="selected_theme_summary">选取主题</string>
     <string name="normal_mode_color">配色</string>
@@ -99,8 +99,8 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="clipboard_draft_output_title">草稿箱过滤规则</string>
     <string name="setup__next">下一步</string>
     <string name="setup__done">完成</string>
-    <string name="setup__enable_ime_hint">在语言和输入设置中启用<b>同文输入法</b></string>
-    <string name="setup__select_ime_hint">选择<b>同文输入法</b>作为默认输入法</string>
+    <string name="setup__enable_ime_hint">在语言和输入设置中启用<b>092五笔</b></string>
+    <string name="setup__select_ime_hint">选择<b>092五笔</b>作为默认输入法</string>
     <string name="setup__enable_ime">启用输入法</string>
     <string name="setup__select_ime">选择输入法</string>
     <string name="setup__prev">上一步</string>
