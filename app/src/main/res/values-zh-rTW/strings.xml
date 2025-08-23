@@ -28,7 +28,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="pref_credits">貢獻代碼</string>
     <string name="about__product_prime">Win10 PRIME輸入法平臺</string>
     <string name="about__privacy_policy">隱私權政策</string>
-    <string name="about__build_info_format">建構者：%1$s\nGit 倉庫：https://github.com/osfans/trime\n建構 Git 雜湊值：e46046abfb030a2687033f74ad00d1b2693af433\n建構時間：2024年7月1日 18:27:14</string>
+    <string name="about__build_info_format">建構者：Release CI\nGit 倉庫：https://github.com/osfans/trime\n建構 Git 雜湊值：e46046abfb030a2687033f74ad00d1b2693af433\n建構時間：2024年7月1日 18:27:14</string>
     <string name="pref_enable">啓用</string>
     <string name="pref_enable_summary">啓用092五筆</string>
     <string name="pref_select">選取軟鍵盤</string>

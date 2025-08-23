@@ -28,7 +28,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="pref_credits">Contribute</string>
     <string name="about__product_prime">Win10 PRIME Platform</string>
     <string name="about__privacy_policy">Privacy Policy</string>
-    <string name="about__build_info_format">Builder: %1$s\nGit Repo: %2$s\nBuild Git Hash: %3$s\nBuild Time: %4$s</string>
+    <string name="about__build_info_format">Builder: Release CI\nGit Repo: https://github.com/osfans/trime\nBuild Git Hash: e46046abfb030a2687033f74ad00d1b2693af433\nBuild Time: 2024年7月1日 18:27:14</string>
     <string name="pref_enable">Enable</string>
     <string name="pref_enable_summary">Enable Trime</string>
     <string name="pref_select">Change Keyboard</string>

@@ -15,6 +15,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
         <Preference app:key="about__changelog"
             app:title="@string/about__changelog"
+            app:summary="v3.2.19-0-ge46046ab-release"
             app:iconSpaceReserved="false">
         </Preference>
 

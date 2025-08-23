@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     <string name="pref_credits">贡献代码</string>
     <string name="about__product_prime">微软平台PRIME输入法</string>
     <string name="about__privacy_policy">隐私策略</string>
-    <string name="about__build_info_format">构建者：%1$s\nGit 仓库：https://github.com/osfans/trime\n构建 Git 哈希：e46046abfb030a2687033f74ad00d1b2693af433\n构建时间：2024年7月1日 18:27:14</string>
+    <string name="about__build_info_format">构建者：Release CI\nGit 仓库：https://github.com/osfans/trime\n构建 Git 哈希：e46046abfb030a2687033f74ad00d1b2693af433\n构建时间：2024年7月1日 18:27:14</string>
     <string name="pref_enable">启用</string>
     <string name="pref_enable_summary">启用092五笔</string>
     <string name="pref_select">选取软键盘</string>
