@@ -112,10 +112,12 @@ object DataManager {
                 Timber.d("Diff: $it")
                 when (it) {
                     is DataDiff.CreateFile,
-                    is DataDiff.UpdateFile -> 
+                    is DataDiff.UpdateFile,
+                    ->
                         ResourceUtils.copyFile(it.path.removePrefix("shared/"), sharedDataDir, "rime/")
                     is DataDiff.DeleteDir,
-                    is DataDiff.DeleteFile ->
+                    is DataDiff.DeleteFile,
+                    ->
                         FileUtils.delete(sharedDataDir.resolve(it.path.removePrefix("rime/"))).getOrThrow()
                 }
             }
