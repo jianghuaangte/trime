@@ -111,9 +111,6 @@ object DataManager {
             DataDiff.diff(oldChecksums, newChecksums).sortedByDescending { it.ordinal }.forEach {
                 Timber.d("Diff: $it")
                 when (it) {
-//                    is DataDiff.CreateFile,
-//                    is DataDiff.UpdateFile,
-//                    -> ResourceUtils.copyFile(it.path, sharedDataDir, "rime/")
                     is DataDiff.CreateFile,
                     is DataDiff.UpdateFile -> {
                         val fixedPath = it.path.removePrefix("shared/")

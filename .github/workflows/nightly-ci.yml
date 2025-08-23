@@ -4,6 +4,7 @@
 
 name: Nightly
 on:
+  push:
   workflow_dispatch:
   schedule:
     - cron: '0 16 * * *' # UTC 16:00 / GMT+8 0:00, daily
