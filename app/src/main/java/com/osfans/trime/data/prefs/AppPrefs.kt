@@ -158,7 +158,7 @@ class AppPrefs(
 
         val soundEnabled by bool(SOUND_ENABLED, false)
         var customSoundEnabled by bool(CUSTOM_SOUND_ENABLED, false)
-        var customSoundPackage by string(CUSTOM_SOUND_PACKAGE, "")
+        var customSoundPackage by string(CUSTOM_SOUND_PACKAGE, "irime_dot")
         val soundVolume by int(SOUND_VOLUME, 100)
         val vibrationEnabled by bool(VIBRATION_ENABLED, false)
         val vibrationDuration by int(VIBRATION_DURATION, 10)

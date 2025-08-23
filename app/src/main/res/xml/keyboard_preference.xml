@@ -15,7 +15,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
         app:iconSpaceReserved="false"
         app:title="@string/pref_keyboard__function">
         <ListPreference
-            android:defaultValue="preview"
+            android:defaultValue="input"
             android:entries="@array/keyboard__inline_entries"
             android:entryValues="@array/keyboard__inline_values"
             android:key="keyboard__inline_preedit"
@@ -66,12 +66,12 @@ SPDX-License-Identifier: GPL-3.0-or-later
         app:iconSpaceReserved="false"
         app:title="@string/pref_keyboard__candidate">
         <SwitchPreferenceCompat
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:key="keyboard__show_window"
             android:title="@string/keyboard__show_window_title"
             app:iconSpaceReserved="false" />
         <SwitchPreferenceCompat
-            android:defaultValue="true"
+            android:defaultValue="false"
             android:key="keyboard__soft_cursor"
             android:title="@string/keyboard__soft_cursor_title"
             app:iconSpaceReserved="false" />
@@ -184,6 +184,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
         <SwitchPreferenceCompat
             android:key="keyboard__key_sound"
             android:title="@string/keyboard__key_sound_title"
+            android:defaultValue="true"
             app:iconSpaceReserved="false" />
         <SwitchPreferenceCompat
             android:key="keyboard__custom_key_sound"
