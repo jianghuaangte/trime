@@ -17,10 +17,6 @@ dependencies {
 
 gradlePlugin {
     plugins {
-        register("androidAppConvention") {
-            id = "com.osfans.trime.app-convention"
-            implementationClass = "AndroidAppConventionPlugin"
-        }
         register("dataChecksums") {
             id = "com.osfans.trime.data-checksums"
             implementationClass = "DataChecksumsPlugin"
@@ -32,10 +28,6 @@ gradlePlugin {
         register("nativeCacheHash") {
             id = "com.osfans.trime.native-cache-hash"
             implementationClass = "NativeCacheHashPlugin"
-        }
-        register("openccData") {
-            id = "com.osfans.trime.opencc-data"
-            implementationClass = "OpenCCDataPlugin"
         }
     }
 }

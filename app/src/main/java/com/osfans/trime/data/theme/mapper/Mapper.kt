@@ -4,60 +4,109 @@
 
 package com.osfans.trime.data.theme.mapper
 
-import com.charleskorn.kaml.YamlList
-import com.charleskorn.kaml.YamlMap
-import com.charleskorn.kaml.YamlNode
-import com.charleskorn.kaml.YamlScalar
-import com.charleskorn.kaml.yamlScalar
-import com.osfans.trime.util.getBool
-import com.osfans.trime.util.getEnum
-import com.osfans.trime.util.getFloat
-import com.osfans.trime.util.getInt
-import com.osfans.trime.util.getString
+import com.osfans.trime.util.config.ConfigItem
+import com.osfans.trime.util.config.ConfigList
+import com.osfans.trime.util.config.ConfigMap
+import com.osfans.trime.util.config.ConfigValue
 
-abstract class Mapper<T>(
-    val node: YamlMap,
-) {
-    abstract fun map(): T
+open class Mapper(private val map: Map<String, ConfigItem?>?) {
+    val errors = ArrayList<String>()
 
     protected fun getString(
         key: String,
         defValue: String = "",
-    ): String = node.getString(key, defValue)
+    ): String {
+        if (map.isNullOrEmpty() || key.isEmpty()) return defValue
+        val v = map[key]
+        return v?.configValue?.getString() ?: run {
+            addError(key)
+            defValue
+        }
+    }
 
     protected fun getInt(
         key: String,
         defValue: Int = 0,
-    ): Int = node.getInt(key, defValue)
+    ): Int {
+        if (map.isNullOrEmpty() || key.isEmpty()) return defValue
+        val v = map[key]
+        return runCatching {
+            v!!.configValue.getInt()
+        }.getOrElse {
+            addError(key)
+            defValue
+        }
+    }
 
     protected fun getFloat(
         key: String,
         defValue: Float = 0f,
-    ): Float = node.getFloat(key, defValue)
+    ): Float {
+        if (map.isNullOrEmpty() || key.isEmpty()) return defValue
+        val v = map[key]
+        return runCatching {
+            v!!.configValue.getFloat()
+        }.getOrElse {
+            addError(key)
+            defValue
+        }
+    }
 
     protected fun getBoolean(
         key: String,
         defValue: Boolean = false,
-    ): Boolean = node.getBool(key, defValue)
+    ): Boolean {
+        if (map.isNullOrEmpty() || key.isEmpty()) return defValue
+        val v = map[key]
+        return runCatching {
+            v!!.configValue.getBool()
+        }.getOrElse {
+            addError(key)
+            defValue
+        }
+    }
 
-    protected inline fun <reified T : Enum<T>> getEnum(
-        key: String,
-        defaultValue: T,
-    ): T = node.getEnum<T>(key, defaultValue)
+    protected fun getObject(key: String): ConfigMap? {
+        return map?.get(key)?.configMap
+            ?: run {
+                addError(key)
+                null
+            }
+    }
 
-    protected fun getList(key: String): List<YamlNode>? = node.get<YamlList>(key)?.items
+    protected fun getList(key: String): List<ConfigItem> {
+        return runCatching {
+            map?.get(key)?.configList?.mapNotNull {
+                it
+            } ?: run {
+                addError(key)
+                listOf()
+            }
+        }.getOrElse {
+            addError(key)
+            listOf()
+        }
+    }
 
     protected fun getStringList(
         key: String,
-        defValue: List<String> = emptyList(),
+        defValue: List<String> = listOf(),
     ): List<String> {
-        val node = node.get<YamlNode>(key)
-        return when (node) {
-            is YamlList -> node.items.map { it.yamlScalar.content }
+        val obj = map?.get(key)
 
-            is YamlScalar -> listOf(node.content)
-
-            else -> defValue
+        return if (obj is ConfigValue) {
+            arrayListOf(obj.getString())
+        } else if (obj is ConfigList) {
+            obj.configList.mapNotNull {
+                it?.configValue?.getString()
+            }.takeIf { it.isNotEmpty() } ?: defValue
+        } else {
+            addError(key)
+            defValue
         }
+    }
+
+    private fun addError(key: String) {
+        errors.add(key)
     }
 }

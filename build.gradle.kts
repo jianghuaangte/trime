@@ -17,14 +17,22 @@ plugins {
     alias(libs.plugins.ksp) apply false
     alias(libs.plugins.kotlin.jvm) apply false
     alias(libs.plugins.kotlin.serialization) apply false
-    alias(libs.plugins.kotlin.parcelize) apply false
     alias(libs.plugins.kotlin.android) apply false
     alias(libs.plugins.spotless)
 }
 
 spotless {
+    java {
+        importOrder()
+        removeUnusedImports()
+        target("app/src/main/java/com/osfans/trime/**/*.java")
+        googleJavaFormat("1.19.2")
+    }
     kotlin {
         target("**/*.kt", "**/*.kts")
-        ktlint("1.5.0")
+        ktlint("1.2.1")
+        trimTrailingWhitespace()
+        indentWithSpaces()
+        endWithNewline()
     }
 }

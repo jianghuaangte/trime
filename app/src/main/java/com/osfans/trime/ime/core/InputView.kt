@@ -5,32 +5,37 @@
 package com.osfans.trime.ime.core
 
 import android.annotation.SuppressLint
+import android.app.Dialog
+import android.graphics.Color
 import android.os.Build
 import android.view.View
 import android.view.View.OnClickListener
-import android.view.WindowInsets
+import android.view.WindowManager
+import android.view.inputmethod.CursorAnchorInfo
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InlineSuggestionsResponse
+import android.view.inputmethod.InputConnection
 import android.widget.ImageView
-import androidx.annotation.RequiresApi
-import androidx.core.content.ContextCompat
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.lifecycle.lifecycleScope
-import com.osfans.trime.core.RimeMessage
+import com.osfans.trime.core.Rime
+import com.osfans.trime.core.RimeNotification
 import com.osfans.trime.daemon.RimeSession
+import com.osfans.trime.data.prefs.AppPrefs
 import com.osfans.trime.data.theme.ColorManager
-import com.osfans.trime.data.theme.Theme
+import com.osfans.trime.data.theme.ThemeManager
 import com.osfans.trime.ime.bar.QuickBar
-import com.osfans.trime.ime.candidates.compact.CompactCandidateModule
-import com.osfans.trime.ime.candidates.suggestion.SuggestionCandidateModule
-import com.osfans.trime.ime.composition.PreeditModule
+import com.osfans.trime.ime.composition.CompositionPopupWindow
 import com.osfans.trime.ime.dependency.InputComponent
 import com.osfans.trime.ime.dependency.create
 import com.osfans.trime.ime.keyboard.KeyboardPrefs.isLandscapeMode
 import com.osfans.trime.ime.keyboard.KeyboardWindow
-import com.osfans.trime.ime.preview.KeyPreviewChoreographer
 import com.osfans.trime.ime.symbol.LiquidKeyboard
+import com.osfans.trime.util.ColorUtils
+import com.osfans.trime.util.styledFloat
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import splitties.dimensions.dp
@@ -59,10 +64,14 @@ import splitties.views.imageDrawable
  */
 @SuppressLint("ViewConstructor")
 class InputView(
-    service: TrimeInputMethodService,
-    rime: RimeSession,
-    theme: Theme,
-) : BaseInputView(service, rime, theme) {
+    val service: TrimeInputMethodService,
+    val rime: RimeSession,
+) : ConstraintLayout(service) {
+    private val theme get() = ThemeManager.activeTheme
+    private var shouldUpdateNavbarForeground = false
+    private var shouldUpdateNavbarBackground = false
+    private val navbarBackground get() = AppPrefs.defaultInstance().theme.navbarBackground
+
     private val keyboardBackground =
         imageView {
             scaleType = ImageView.ScaleType.CENTER_CROP
@@ -71,41 +80,34 @@ class InputView(
 
     private val leftPaddingSpace =
         view(::View) {
-            setOnClickListener(placeholderListener)
+            setOnClickListener { placeholderListener }
         }
 
     private val rightPaddingSpace =
         view(::View) {
-            setOnClickListener(placeholderListener)
+            setOnClickListener { placeholderListener }
         }
 
     private val bottomPaddingSpace =
         view(::View) {
-            setOnClickListener(placeholderListener)
+            setOnClickListener { placeholderListener }
         }
 
-    private val updateWindowViewHeightJob: Job
+    private val notificationHandlerJob: Job
 
     private val themedContext = context.withTheme(android.R.style.Theme_DeviceDefault_Settings)
-    private val inputComponent = InputComponent::class.create(this, themedContext, theme, service, rime)
+    private val inputComponent = InputComponent::class.create(themedContext, theme, service)
     private val broadcaster = inputComponent.broadcaster
-    private val enterKeyLabel = inputComponent.enterKeyLabel
     private val windowManager = inputComponent.windowManager
-    private val quickBar: QuickBar = inputComponent.quickBar
-    private val preedit: PreeditModule = inputComponent.preedit
-    private val keyboardWindow: KeyboardWindow = inputComponent.keyboardWindow
-    private val liquidKeyboard: LiquidKeyboard = inputComponent.liquidKeyboard
-    private val compactCandidate: CompactCandidateModule = inputComponent.candidate.compactCandidateModule
-    private val suggestionCandidate: SuggestionCandidateModule = inputComponent.candidate.suggestionCandidateModule
-    private val preview: KeyPreviewChoreographer = inputComponent.preview
+    val quickBar: QuickBar = inputComponent.quickBar
+    val composition: CompositionPopupWindow = inputComponent.composition
+    val keyboardWindow: KeyboardWindow = inputComponent.keyboardWindow
+    val liquidKeyboard: LiquidKeyboard = inputComponent.liquidKeyboard
 
     private fun addBroadcastReceivers() {
         broadcaster.addReceiver(quickBar)
-        broadcaster.addReceiver(preedit)
         broadcaster.addReceiver(keyboardWindow)
         broadcaster.addReceiver(liquidKeyboard)
-        broadcaster.addReceiver(compactCandidate)
-        broadcaster.addReceiver(suggestionCandidate)
     }
 
     private val keyboardSidePadding = theme.generalStyle.keyboardPadding
@@ -132,12 +134,57 @@ class InputView(
     init {
         addBroadcastReceivers()
 
+        notificationHandlerJob =
+            service.lifecycleScope.launch {
+                rime.run { notificationFlow }.collect {
+                    handleRimeNotification(it)
+                }
+            }
+
         windowManager.cacheResidentWindow(keyboardWindow, createView = true)
         windowManager.cacheResidentWindow(liquidKeyboard)
-        // show KeyboardWindow by default
-        windowManager.attachWindow(KeyboardWindow)
+
+        service.window.window!!.also {
+            when (navbarBackground) {
+                AppPrefs.Theme.NavbarBackground.NONE -> {
+                    WindowCompat.setDecorFitsSystemWindows(it, true)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        it.isNavigationBarContrastEnforced = true
+                    }
+                }
+                AppPrefs.Theme.NavbarBackground.COLOR_ONLY -> {
+                    shouldUpdateNavbarForeground = true
+                    shouldUpdateNavbarBackground = true
+                    // don't draw behind navigation bar
+                    WindowCompat.setDecorFitsSystemWindows(it, true)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        // don't apply scrim to transparent navigation bar
+                        it.isNavigationBarContrastEnforced = false
+                    }
+                }
+                AppPrefs.Theme.NavbarBackground.FULL -> {
+                    shouldUpdateNavbarForeground = true
+                    // allow draw behind navigation bar
+                    WindowCompat.setDecorFitsSystemWindows(it, false)
+                    it.navigationBarColor = Color.TRANSPARENT
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        // don't apply scrim to transparent navigation bar
+                        it.isNavigationBarContrastEnforced = false
+                    }
+                    ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets ->
+                        insets.getInsets(WindowInsetsCompat.Type.navigationBars()).let {
+                            bottomPaddingSpace.updateLayoutParams<LayoutParams> {
+                                bottomMargin = it.bottom
+                            }
+                        }
+                        WindowInsetsCompat.CONSUMED
+                    }
+                }
+            }
+        }
 
         keyboardBackground.imageDrawable = ColorManager.getDrawable("keyboard_background")
+            ?: ColorManager.getDrawable("keyboard_back_color")
 
         keyboardView =
             constraintLayout {
@@ -150,7 +197,7 @@ class InputView(
                 )
                 add(
                     quickBar.view,
-                    lParams(matchParent, dp(quickBar.themedHeight)) {
+                    lParams(matchParent, wrapContent) {
                         topOfParent()
                         centerHorizontally()
                     },
@@ -173,7 +220,7 @@ class InputView(
                 )
                 add(
                     windowManager.view,
-                    lParams {
+                    lParams(matchParent, wrapContent) {
                         below(quickBar.view)
                         above(bottomPaddingSpace)
                     },
@@ -188,37 +235,13 @@ class InputView(
                 )
             }
 
-        updateWindowViewHeightJob =
-            service.lifecycleScope.launch {
-                keyboardWindow.currentKeyboardHeight.collect {
-                    windowManager.view.updateLayoutParams {
-                        height = it
-                    }
-                }
-            }
-
         updateKeyboardSize()
-
-        add(
-            preedit.ui.root,
-            lParams(matchParent, wrapContent) {
-                above(keyboardView)
-                centerHorizontally()
-            },
-        )
 
         add(
             keyboardView,
             lParams(matchParent, wrapContent) {
                 centerHorizontally()
                 bottomOfParent()
-            },
-        )
-
-        add(
-            preview.root,
-            lParams(matchParent, matchParent) {
-                centerInParent()
             },
         )
     }
@@ -258,73 +281,113 @@ class InputView(
         quickBar.view.setPadding(sidePadding, 0, sidePadding, 0)
     }
 
-    override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
-        bottomPaddingSpace.updateLayoutParams<LayoutParams> {
-            bottomMargin = getNavBarBottomInset(insets)
-        }
-        return insets
-    }
-
     fun startInput(
         info: EditorInfo,
         restarting: Boolean = false,
     ) {
-        broadcaster.onStartInput(info)
-        enterKeyLabel.updateLabelOnEditorInfo(info)
+        if (!restarting) {
+            if (shouldUpdateNavbarForeground || shouldUpdateNavbarBackground) {
+                service.window.window!!.also {
+                    val backColor = ColorManager.getColor("back_color") ?: Color.BLACK
+                    if (shouldUpdateNavbarForeground) {
+                        WindowCompat.getInsetsController(it, it.decorView)
+                            .isAppearanceLightNavigationBars = ColorUtils.isContrastedDark(backColor)
+                    }
+                    if (shouldUpdateNavbarBackground) {
+                        it.navigationBarColor = backColor
+                    }
+                }
+            }
+        }
+        keyboardWindow.oldMainInputView.mainKeyboardView.updateEnterLabelOnEditorInfo(info)
         if (!restarting) {
             windowManager.attachWindow(KeyboardWindow)
         }
     }
 
-    override fun handleRimeMessage(it: RimeMessage<*>) {
+    private fun handleRimeNotification(it: RimeNotification<*>) {
         when (it) {
-            is RimeMessage.SchemaMessage -> {
-                broadcaster.onRimeSchemaUpdated(it.data)
-
-                windowManager.attachWindow(KeyboardWindow)
+            is RimeNotification.OptionNotification -> {
+                broadcaster.onRimeOptionUpdated(it.value)
             }
-
-            is RimeMessage.OptionMessage -> {
-                broadcaster.onRimeOptionUpdated(it.data)
-
-                if (it.data.option == "_liquid_keyboard") {
-                    ContextCompat.getMainExecutor(service).execute {
-                        windowManager.attachWindow(LiquidKeyboard)
-                        liquidKeyboard.select(0)
-                    }
-                }
-            }
-
-            is RimeMessage.ResponseMessage ->
-                it.data.let event@{
-                    broadcaster.onInputContextUpdate(it.context)
-                }
-
             else -> {}
         }
     }
 
-    fun updateSelection(
-        start: Int,
-        end: Int,
-    ) {
-        broadcaster.onSelectionUpdate(start, end)
+    enum class Board {
+        Main,
+        Symbol,
     }
 
-    @RequiresApi(Build.VERSION_CODES.R)
-    fun handleInlineSuggestions(response: InlineSuggestionsResponse): Boolean {
-        val suggestions = response.inlineSuggestions
-        broadcaster.onInlineSuggestions(suggestions)
-        quickBar.handleInlineSuggestions(suggestions.isEmpty())
-        return true
+    fun switchBoard(board: Board) {
+        when (board) {
+            Board.Main -> windowManager.attachWindow(KeyboardWindow)
+            Board.Symbol -> windowManager.attachWindow(LiquidKeyboard)
+        }
+    }
+
+    fun updateCursorAnchorInfo(info: CursorAnchorInfo) {
+        composition.updateCursorAnchorInfo(info)
+    }
+
+    fun updateComposing(ic: InputConnection?) {
+        val candidateView = quickBar.oldCandidateBar.candidates
+        val compositionView = composition.composition.compositionView
+        val mainKeyboardView = keyboardWindow.oldMainInputView.mainKeyboardView
+        if (composition.isPopupWindowEnabled) {
+            val offset = Rime.inputContext?.let { compositionView.update(it) } ?: 0
+            candidateView.setText(offset)
+            val isCursorUpdated =
+                if (ic != null && !composition.isWinFixed()) {
+                    ic.requestCursorUpdates(InputConnection.CURSOR_UPDATE_IMMEDIATE)
+                } else {
+                    false
+                }.also { composition.isCursorUpdated = it }
+            // if isCursorUpdated, updateView will be called in onUpdateCursorAnchorInfo
+            // otherwise we need to call it here
+            if (!isCursorUpdated) {
+                composition.updateView()
+            }
+        } else {
+            candidateView.setText(0)
+        }
+        mainKeyboardView.invalidateComposingKeys()
+    }
+
+    private var showingDialog: Dialog? = null
+
+    fun showDialog(dialog: Dialog) {
+        showingDialog?.dismiss()
+        val windowToken = windowToken
+        check(windowToken != null) { "InputView Token is null." }
+        val window = dialog.window!!
+        window.attributes.apply {
+            token = windowToken
+            type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG
+        }
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM or
+                WindowManager.LayoutParams.FLAG_DIM_BEHIND,
+        )
+        window.setDimAmount(themedContext.styledFloat(android.R.attr.backgroundDimAmount))
+        showingDialog =
+            dialog.apply {
+                setOnDismissListener { this@InputView.showingDialog = null }
+                show()
+            }
+    }
+
+    fun finishInput() {
+        showingDialog?.dismiss()
+        keyboardWindow.oldMainInputView.mainKeyboardView.finishInput()
     }
 
     override fun onDetachedFromWindow() {
         ViewCompat.setOnApplyWindowInsetsListener(this, null)
+        showingDialog?.dismiss()
         // cancel the notification job and clear all broadcast receivers,
         // implies that InputView should not be attached again after detached.
-        updateWindowViewHeightJob.cancel()
-        preview.root.removeAllViews()
+        notificationHandlerJob.cancel()
         broadcaster.clear()
         super.onDetachedFromWindow()
     }

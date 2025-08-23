@@ -23,6 +23,9 @@ enum class SymbolBoardType {
     //  文本框编辑历史，即“草稿箱”
     DRAFT,
 
+    // 候选词
+    CANDIDATE,
+
     //  近期上屏符号历史（需要区分来源并提示？）
     HISTORY,
 
@@ -61,10 +64,14 @@ enum class SymbolBoardType {
 
         // 是否在liquidKeyboard键盘区域展示按键
         @JvmStatic
-        fun hasKeys(type: SymbolBoardType): Boolean = type > HISTORY
+        fun hasKeys(type: SymbolBoardType): Boolean {
+            return type > HISTORY
+        }
 
         // 是否呈现在liquidKeyboard键盘区域的tabs列表中
         @JvmStatic
-        fun hasKey(type: SymbolBoardType): Boolean = type >= CLIPBOARD
+        fun hasKey(type: SymbolBoardType): Boolean {
+            return type >= CLIPBOARD
+        }
     }
 }

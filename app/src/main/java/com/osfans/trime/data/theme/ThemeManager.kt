@@ -4,70 +4,76 @@
 
 package com.osfans.trime.data.theme
 
-import android.content.res.Configuration
+import androidx.annotation.Keep
 import com.osfans.trime.data.base.DataManager
 import com.osfans.trime.data.prefs.AppPrefs
 import com.osfans.trime.ime.symbol.TabManager
-import com.osfans.trime.util.WeakHashSet
+import java.io.File
 
 object ThemeManager {
     fun interface OnThemeChangeListener {
         fun onThemeChange(theme: Theme)
     }
 
-    fun getAllThemes(): List<ThemeItem> {
-        val sharedThemes = ThemeFilesManager.listThemes(DataManager.sharedDataDir)
-        val userThemes = ThemeFilesManager.listThemes(DataManager.userDataDir)
+    /**
+     * Update sharedThemes and userThemes.
+     */
+    @Keep
+    private val onDataDirChange =
+        DataManager.OnDataDirChangeListener {
+            refreshThemes()
+        }
+
+    init {
+        // register listener
+        DataManager.addOnChangedListener(onDataDirChange)
+    }
+
+    private fun listThemes(path: File): MutableList<String> {
+        return path.listFiles { _, name -> name.endsWith("trime.yaml") }
+            ?.mapNotNull { f ->
+                if (f.name == "trime.yaml") "trime" else f.name.substringBeforeLast(".trime.yaml")
+            }
+            ?.toMutableList() ?: mutableListOf()
+    }
+
+    private val sharedThemes: MutableList<String> get() = listThemes(DataManager.sharedDataDir)
+
+    private val userThemes: MutableList<String> get() = listThemes(DataManager.userDataDir)
+
+    fun getAllThemes(): List<String> {
+        if (DataManager.sharedDataDir.absolutePath == DataManager.userDataDir.absolutePath) {
+            return userThemes
+        }
         return sharedThemes + userThemes
     }
 
-    private lateinit var _activeTheme: Theme
+    private fun refreshThemes() {
+        sharedThemes.clear()
+        userThemes.clear()
+        sharedThemes.addAll(listThemes(DataManager.sharedDataDir))
+        userThemes.addAll(listThemes(DataManager.userDataDir))
+    }
 
-    var activeTheme: Theme
-        get() = _activeTheme
-        private set(value) {
-            if (::_activeTheme.isInitialized && _activeTheme == value) return
-            _activeTheme = value
-            fireChange()
+    // 在初始化 ColorManager 时会被赋值
+    lateinit var activeTheme: Theme
+        private set
+
+    private val prefs = AppPrefs.defaultInstance().theme
+
+    fun init() = setNormalTheme(prefs.selectedTheme)
+
+    fun setNormalTheme(name: String) {
+        Theme(name).let {
+            if (::activeTheme.isInitialized) {
+                if (it == activeTheme) return
+            }
+            activeTheme = it
+            // 由于这里的顺序不能打乱，不适合使用 listener
+            EventManager.refresh()
+            FontManager.refresh()
+            ColorManager.refresh()
+            TabManager.refresh()
         }
-
-    private val onChangeListeners = WeakHashSet<OnThemeChangeListener>()
-
-    fun addOnChangedListener(listener: OnThemeChangeListener) {
-        onChangeListeners.add(listener)
-    }
-
-    fun removeOnChangedListener(listener: OnThemeChangeListener) {
-        onChangeListeners.remove(listener)
-    }
-
-    private fun fireChange() {
-        onChangeListeners.forEach { it.onThemeChange(_activeTheme) }
-    }
-
-    val prefs = AppPrefs.defaultInstance().registerProvider(::ThemePrefs)
-
-    private fun evaluateActiveTheme(): Theme {
-        val newTheme = Theme.decodeByConfigId(prefs.selectedTheme.getValue())
-        KeyActionManager.resetCache()
-        FontManager.resetCache(newTheme)
-        ColorManager.switchTheme(newTheme)
-        TabManager.resetCache(newTheme)
-        return newTheme
-    }
-
-    fun init(configuration: Configuration) {
-        _activeTheme = evaluateActiveTheme()
-        ColorManager.init(configuration)
-    }
-
-    fun selectTheme(configId: String) {
-        val theme = Theme.decodeByConfigId(configId)
-        KeyActionManager.resetCache()
-        FontManager.resetCache(theme)
-        ColorManager.switchTheme(theme)
-        TabManager.resetCache(theme)
-        activeTheme = theme
-        prefs.selectedTheme.setValue(theme.configId)
     }
 }

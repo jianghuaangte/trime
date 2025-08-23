@@ -16,12 +16,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.cancellable
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 
-class Logcat(
-    val pid: Int? = Process.myPid(),
-) : CoroutineScope by CoroutineScope(Dispatchers.IO) {
+class Logcat(val pid: Int? = Process.myPid()) : CoroutineScope by CoroutineScope(Dispatchers.IO) {
     private var process: java.lang.Process? = null
     private var emittingJob: Job? = null
 
@@ -39,7 +40,11 @@ class Logcat(
     fun getLogAsync(): Deferred<Result<List<String>>> =
         async {
             runCatching {
-                subprocess("logcat", pid?.let { "--pid=$it" } ?: "", "-d").readLines()
+                Runtime.getRuntime()
+                    .exec(arrayOf("logcat", pid?.let { "--pid=$it" } ?: "", "-d"))
+                    .inputStream
+                    .bufferedReader()
+                    .readLines()
             }
         }
 
@@ -48,7 +53,7 @@ class Logcat(
      */
     fun clearLog(): Job =
         launch {
-            runCatching { subprocess("logcat", "--clear") }
+            runCatching { Runtime.getRuntime().exec(arrayOf("logcat", "-c")) }
         }
 
     /**
@@ -60,9 +65,16 @@ class Logcat(
         } else {
             launch {
                 runCatching {
-                    subprocess("logcat", pid?.let { "--pid=$it" } ?: "", "-v", "time")
+                    Runtime
+                        .getRuntime()
+                        .exec(arrayOf("logcat", pid?.let { "--pid=$it" } ?: "", "-v", "time"))
                         .also { process = it }
+                        .inputStream
+                        .bufferedReader()
+                        .lineSequence()
                         .asFlow()
+                        .flowOn(Dispatchers.IO)
+                        .cancellable()
                         .collect { flow.emit(it) }
                 }
             }.also { emittingJob = it }

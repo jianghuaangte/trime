@@ -94,8 +94,7 @@ fun Context.getFileFromUri(uri: Uri): File? {
                             Environment.MEDIA_MOUNTED ==
                                 getState.invoke(
                                     storageVolumeElement,
-                                ) ||
-                                Environment.MEDIA_MOUNTED_READ_ONLY == getState.invoke(storageVolumeElement)
+                                ) || Environment.MEDIA_MOUNTED_READ_ONLY == getState.invoke(storageVolumeElement)
 
                         // if the media is not mounted, we need not get the volume details
                         if (!mounted) continue

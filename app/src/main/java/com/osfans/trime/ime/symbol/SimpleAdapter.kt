@@ -19,12 +19,11 @@ import com.osfans.trime.databinding.SimpleItemOneBinding
 import com.osfans.trime.databinding.SimpleItemRowBinding
 import splitties.dimensions.dp
 
-class SimpleAdapter(
-    private val theme: Theme,
-    private val columnSize: Int,
-) : RecyclerView.Adapter<SimpleAdapter.ViewHolder>() {
+class SimpleAdapter(theme: Theme, private val columnSize: Int) :
+    RecyclerView.Adapter<SimpleAdapter.ViewHolder>() {
     private val mBeans = mutableListOf<SimpleKeyBean>()
     private val mBeansByRows = mutableListOf<List<SimpleKeyBean>>()
+    val beans get() = mBeans
 
     fun updateBeans(beans: List<SimpleKeyBean>) {
         val prevSize = mBeansByRows.size
@@ -36,16 +35,27 @@ class SimpleAdapter(
         notifyItemRangeInserted(0, mBeansByRows.size)
     }
 
-    override fun getItemCount(): Int = mBeansByRows.size
+    override fun getItemCount(): Int {
+        return mBeansByRows.size
+    }
 
-    override fun getItemId(position: Int): Long = position * 1000L
+    override fun getItemId(position: Int): Long {
+        return position * 1000L
+    }
 
-    private val mSingleWidth = theme.liquidKeyboard.singleWidth
-    private val mSingleHeight = theme.liquidKeyboard.keyHeight
-    private val mStringMarginX = theme.liquidKeyboard.marginX
+    private val mSingleWidth = theme.liquid.getInt("single_width")
+    private val mSingleHeight = theme.liquid.getInt("key_height")
+    private val mStringMarginX = theme.liquid.getFloat("margin_x")
     private val mTextSize = theme.generalStyle.labelTextSize
     private val mTextColor = ColorManager.getColor("key_text_color")
     private val mTypeface = FontManager.getTypeface("key_font")
+    private val mBackground =
+        ColorManager.getDrawable(
+            key = "key_back_color",
+            border = theme.generalStyle.keyBorder,
+            borderColorKey = "key_border_color",
+            roundCorner = theme.generalStyle.roundCorner,
+        )
 
     override fun onCreateViewHolder(
         parent: ViewGroup,
@@ -69,27 +79,19 @@ class SimpleAdapter(
         holder.simpleKeyTexts.forEachIndexed { index, textView ->
             holder.wrappers[index].tag = index
             textView.apply {
-                textSize = mTextSize
-                setTextColor(mTextColor)
+                mTextSize.takeIf { it > 0f }?.let { this.textSize = it.toFloat() }
+                mTextColor?.let { setTextColor(it) }
                 typeface = mTypeface
                 gravity = Gravity.CENTER
                 ellipsize = TextUtils.TruncateAt.MARQUEE
-                background =
-                    ColorManager.getDrawable(
-                        "key_back_color",
-                        "key_border_color",
-                        dp(theme.generalStyle.keyBorder),
-                        dp(theme.generalStyle.roundCorner),
-                    )
+                background = mBackground
             }
         }
         return holder
     }
 
-    class ViewHolder(
-        binding: SimpleItemRowBinding,
-        views: List<SimpleItemOneBinding>,
-    ) : RecyclerView.ViewHolder(binding.root) {
+    class ViewHolder(binding: SimpleItemRowBinding, views: List<SimpleItemOneBinding>) :
+        RecyclerView.ViewHolder(binding.root) {
         val simpleKeyTexts = views.map { it.root.getChildAt(0) as TextView }
         val wrappers = views.map { it.root.apply { getChildAt(1).visibility = View.GONE } }
     }

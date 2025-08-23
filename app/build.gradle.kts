@@ -4,30 +4,29 @@
 
 @file:Suppress("UnstableApiUsage")
 
+import org.gradle.configurationcache.extensions.capitalized
+
 plugins {
-    id("com.osfans.trime.app-convention")
     id("com.osfans.trime.native-app-convention")
     id("com.osfans.trime.data-checksums")
     id("com.osfans.trime.native-cache-hash")
-    id("com.osfans.trime.opencc-data")
     alias(libs.plugins.aboutlibraries)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.kotlin.parcelize)
     alias(libs.plugins.ksp)
 }
 
 android {
     namespace = "com.osfans.trime"
-    compileSdk = 35
-    buildToolsVersion = "35.0.0"
+    compileSdk = 34
+    buildToolsVersion = "34.0.0"
 
     defaultConfig {
         applicationId = "com.osfans.trime"
         minSdk = 21
-        targetSdk = 35
-        versionCode = 20250901
-        versionName = "3.3.6"
+        targetSdk = 34
+        versionCode = 20240701
+        versionName = "3.2.19"
 
         multiDexEnabled = true
         setProperty("archivesBaseName", "$applicationId-$buildVersionName")
@@ -40,19 +39,19 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro",
-            )
+            isMinifyEnabled = false
+            // proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-android.txt"
             signingConfig =
-                project.signKeyFile?.let {
-                    signingConfigs.create("release") {
-                        storeFile = it
-                        storePassword = project.signKeyStorePwd
-                        keyAlias = project.signKeyAlias
-                        keyPassword = project.signKeyPwd
+                with(ApkRelease) {
+                    if (project.buildApkRelease) {
+                        signingConfigs.create("release") {
+                            storeFile = file(project.storeFile!!)
+                            storePassword = project.storePassword
+                            keyAlias = project.keyAlias
+                            keyPassword = project.keyPassword
+                        }
+                    } else {
+                        null
                     }
                 }
 
@@ -62,11 +61,6 @@ android {
             applicationIdSuffix = ".debug"
 
             resValue("string", "trime_app_name", "@string/app_name_debug")
-        }
-        all {
-            // remove META-INF/version-control-info.textproto
-            @Suppress("UnstableApiUsage")
-            vcsInfo.include = false
         }
     }
 
@@ -94,24 +88,6 @@ android {
             it.useJUnitPlatform()
         }
     }
-
-    dependenciesInfo {
-        includeInApk = false
-        includeInBundle = false
-    }
-
-    packaging {
-        resources {
-            excludes +=
-                setOf(
-                    "/META-INF/*.version",
-                    "/META-INF/*.kotlin_module", // cannot be excluded actually
-                    "/META-INF/androidx/**",
-                    "/DebugProbesKt.bin",
-                    "/kotlin-tooling-metadata.json",
-                )
-        }
-    }
 }
 
 kotlin {
@@ -133,7 +109,7 @@ ksp {
 }
 
 android.applicationVariants.all {
-    val variantName = name.replaceFirstChar { it.uppercase() }
+    val variantName = name.capitalized()
     tasks.findByName("generateDataChecksums")?.also {
         tasks.getByName("merge${variantName}Assets").dependsOn(it)
     }
@@ -145,21 +121,17 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.appcompat)
-    implementation(libs.androidx.autofill)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.navigation.fragment)
     implementation(libs.androidx.navigation.ui)
-    implementation(libs.androidx.paging.runtime.ktx)
     implementation(libs.androidx.preference)
     implementation(libs.androidx.recyclerview)
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.viewpager2)
-    implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.flexbox)
-    implementation(libs.bravh)
     implementation(libs.kaml)
     implementation(libs.timber)
     implementation(libs.xxpermissions)
@@ -179,11 +151,4 @@ dependencies {
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotest.assertions.core)
     androidTestImplementation(libs.junit)
-}
-
-configurations {
-    all {
-        // remove Baseline Profile Installer or whatever it is...
-        exclude(group = "androidx.profileinstaller", module = "profileinstaller")
-    }
 }

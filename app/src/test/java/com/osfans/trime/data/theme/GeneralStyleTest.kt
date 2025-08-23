@@ -4,75 +4,76 @@
 
 package com.osfans.trime.data.theme
 
-import com.osfans.trime.BuildConfig
-import com.osfans.trime.core.Rime
-import com.osfans.trime.core.RimeConfig
 import com.osfans.trime.data.theme.mapper.GeneralStyleMapper
-import com.osfans.trime.data.theme.model.GeneralStyle
+import com.osfans.trime.ime.symbol.CandidateAdapter
+import com.osfans.trime.util.config.Config
+import com.osfans.trime.util.config.ConfigData
 import io.kotest.core.spec.style.BehaviorSpec
+import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
-import java.io.File
 
-class GeneralStyleTest :
-    BehaviorSpec({
-        Given("Correct trime.yaml") {
-            val dir = File("src/test/assets")
-            Rime.startupRime(
-                dir.absolutePath,
-                dir.absolutePath,
-                BuildConfig.BUILD_VERSION_NAME,
-                false,
-            )
+class GeneralStyleTest : BehaviorSpec({
+    Given("Correct trime.yaml") {
+        val style =
+            Config(
+                ConfigData().apply {
+                    loadFromFile("src/test/assets/trime.yaml")
+                },
+            ).getMap("style")
 
-            When("loaded") {
-                val generalStyle =
-                    RimeConfig.openUserConfig("trime").use {
-                        GeneralStyleMapper("style", it).map()
-                    }
+        When("loaded") {
+            val mapper = GeneralStyleMapper(style)
 
-                Then("it should not be null") {
-                    generalStyle shouldNotBe null
-                    generalStyle.autoCaps shouldBe "false"
-                    generalStyle.backgroundDimAmount shouldBe 0.5
+            val generalStyle = mapper.map()
 
-                    generalStyle.candidateFont shouldBe listOf("han.ttf")
-                }
+            Then("it should not be null") {
+                generalStyle shouldNotBe null
+                generalStyle.autoCaps shouldBe "false"
+                generalStyle.backgroundDimAmount shouldBe 0.5
+
+                generalStyle.candidateFont shouldBe listOf("han.ttf")
+                println("Error: " + mapper.errors.size + ", " + mapper.errors.joinToString(","))
+                mapper.errors.size shouldBe 0
             }
-
-            Rime.exitRime()
         }
+    }
 
-        Given("Empty trime.yaml") {
-            val dir = File("src/test/assets")
-            Rime.startupRime(
-                dir.absolutePath,
-                dir.absolutePath,
-                BuildConfig.BUILD_VERSION_NAME,
-                false,
-            )
+    Given("Empty trime.yaml") {
+        val style =
+            Config(
+                ConfigData().apply {
+                    loadFromFile("src/test/assets/incorrect.yaml")
+                },
+            ).getMap("style")
 
-            When("loaded") {
-                val generalStyle =
-                    RimeConfig.openUserConfig("incorrect").use {
-                        GeneralStyleMapper("style", it).map()
-                    }
+        When("loaded") {
+            val mapper = GeneralStyleMapper(style)
 
-                Then("with default value without exception") {
-                    generalStyle.autoCaps shouldBe ""
-                    generalStyle.backgroundDimAmount shouldBe 0
-                    generalStyle.candidateBorder shouldBe 0
-                    generalStyle.candidateFont shouldBe emptyList()
-                    generalStyle.candidateUseCursor shouldBe false
-                    generalStyle.commentPosition shouldBe GeneralStyle.CommentPosition.UNKNOWN
+            val generalStyle = mapper.map()
 
-                    generalStyle.enterLabel shouldNotBe null
-                    generalStyle.enterLabel.go shouldBe "go"
+            Then("with default value without exception") {
+                generalStyle.autoCaps shouldBe ""
+                generalStyle.backgroundDimAmount shouldBe 0
+                generalStyle.candidateBorder shouldBe 0
+                generalStyle.candidateFont shouldBe emptyList()
+                generalStyle.candidateUseCursor shouldBe false
+                generalStyle.commentPosition shouldBe CandidateAdapter.CommentPosition.UNKNOWN
 
-                    generalStyle.layout shouldNotBe null
-                }
+                generalStyle.enterLabel shouldNotBe null
+                generalStyle.enterLabel.go shouldBe "go"
+
+                generalStyle.window shouldNotBe null
+                generalStyle.window.size shouldBe 0
+
+                generalStyle.layout shouldNotBe null
+
+                generalStyle.liquidKeyboardWindow shouldNotBe null
+                generalStyle.liquidKeyboardWindow.size shouldBe 0
+
+                println("Error: " + mapper.errors.size + ", " + mapper.errors.joinToString(","))
+                mapper.errors.size shouldBeGreaterThan 0
             }
-
-            Rime.exitRime()
         }
-    })
+    }
+})

@@ -34,12 +34,8 @@ class RimeLifecycleImpl : RimeLifecycle {
                 checkAtState(RimeLifecycle.State.STARTING)
                 internalStateFlow.value = RimeLifecycle.State.READY
             }
-            RimeLifecycle.State.STOPPING -> {
-                checkAtState(RimeLifecycle.State.READY)
-                internalStateFlow.value = RimeLifecycle.State.STOPPING
-            }
             RimeLifecycle.State.STOPPED -> {
-                checkAtState(RimeLifecycle.State.STOPPING)
+                checkAtState(RimeLifecycle.State.READY)
                 internalStateFlow.value = RimeLifecycle.State.STOPPED
             }
         }
@@ -57,7 +53,6 @@ interface RimeLifecycle {
     enum class State {
         STARTING,
         READY,
-        STOPPING,
         STOPPED,
     }
 }
@@ -86,20 +81,18 @@ class RimeLifecycleScope(
 suspend fun <T> RimeLifecycle.whenAtState(
     state: RimeLifecycle.State,
     block: suspend CoroutineScope.() -> T,
-): T =
-    if (currentStateFlow.value == state) {
+): T {
+    return if (currentStateFlow.value == state) {
         block(lifecycleScope)
     } else {
         StateDelegate(this, state).run(block)
     }
+}
 
 suspend inline fun <T> RimeLifecycle.whenReady(noinline block: suspend CoroutineScope.() -> T) =
     whenAtState(RimeLifecycle.State.READY, block)
 
-private class StateDelegate(
-    val lifecycle: RimeLifecycle,
-    val state: RimeLifecycle.State,
-) {
+private class StateDelegate(val lifecycle: RimeLifecycle, val state: RimeLifecycle.State) {
     private var job: Job? = null
 
     init {

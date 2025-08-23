@@ -4,28 +4,21 @@
 
 package com.osfans.trime.daemon
 
-import android.app.PendingIntent
-import android.content.Intent
-import android.graphics.Color
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
 import androidx.core.app.NotificationCompat
 import com.osfans.trime.R
 import com.osfans.trime.TrimeApplication
 import com.osfans.trime.core.Rime
 import com.osfans.trime.core.RimeApi
 import com.osfans.trime.core.RimeLifecycle
-import com.osfans.trime.core.RimeMessage
 import com.osfans.trime.core.lifecycleScope
 import com.osfans.trime.core.whenReady
-import com.osfans.trime.ui.main.LogActivity
 import com.osfans.trime.util.appContext
-import com.osfans.trime.util.createNotificationChannel
-import com.osfans.trime.util.readText
-import com.osfans.trime.util.subprocess
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import splitties.systemservices.notificationManager
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -110,38 +103,24 @@ object RimeDaemon {
             }
         }
 
-    /**
-     * Reuse a session for remote service
-     */
-    fun getFirstSessionOrNull() = sessions.firstNotNullOfOrNull { it.value }
-
-    private const val CHANNEL_ID = "rime-daemon"
-    private const val MESSAGE_ID = 2331
-    private var restartId = 0
-
     init {
-        createNotificationChannel(
-            CHANNEL_ID,
-            appContext.getString(R.string.rime_daemon),
-        )
-        TrimeApplication.getInstance().coroutineScope.launch {
-            realRime.messageFlow.collect {
-                handleRimeMessage(it)
-            }
+        createNotificationChannel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel =
+                NotificationChannel(
+                    CHANNEL_ID,
+                    appContext.getText(R.string.rime_daemon),
+                    NotificationManager.IMPORTANCE_HIGH,
+                ).apply { description = CHANNEL_ID }
+            notificationManager.createNotificationChannel(channel)
         }
     }
 
-    private inline fun sendNotification(
-        id: Int,
-        buildAction: NotificationCompat.Builder.() -> Unit,
-    ) {
-        val builder =
-            NotificationCompat
-                .Builder(appContext, CHANNEL_ID)
-                .setContentTitle(appContext.getString(R.string.rime_daemon))
-        builder.buildAction()
-        builder.build().let { notificationManager.notify(id, it) }
-    }
+    private const val CHANNEL_ID = "rime-daemon"
+    private var restartId = 0
 
     /**
      * Restart Rime instance to deploy while keep the session
@@ -149,16 +128,14 @@ object RimeDaemon {
     fun restartRime(fullCheck: Boolean = false) =
         lock.withLock {
             val id = restartId++
-            if (!fullCheck) {
-                sendNotification(id) {
-                    setSmallIcon(R.drawable.ic_baseline_sync_24)
-                    setContentTitle(appContext.getString(R.string.rime_daemon))
-                    setContentText(appContext.getString(R.string.restarting_rime))
-                    setOngoing(true)
-                    setProgress(100, 0, true)
-                    setPriority(NotificationCompat.PRIORITY_HIGH)
-                }
-            }
+            NotificationCompat.Builder(appContext, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_baseline_sync_24)
+                .setContentTitle(appContext.getString(R.string.rime_daemon))
+                .setContentText(appContext.getString(R.string.restarting_rime))
+                .setOngoing(true)
+                .setProgress(100, 0, true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .build().let { notificationManager.notify(id, it) }
             realRime.finalize()
             realRime.startup(fullCheck)
             TrimeApplication.getInstance().coroutineScope.launch {
@@ -168,58 +145,4 @@ object RimeDaemon {
                 }
             }
         }
-
-    private suspend fun handleRimeMessage(it: RimeMessage<*>) {
-        if (it is RimeMessage.DeployMessage) {
-            when (it.data) {
-                RimeMessage.DeployMessage.State.Start -> {
-                    sendNotification(MESSAGE_ID) {
-                        setSmallIcon(R.drawable.ic_baseline_sync_24)
-                        setColor(Color.GRAY)
-                        setContentText(appContext.getString(R.string.deploy_progress))
-                        setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                        setTimeoutAfter(2000L)
-                    }
-                    withContext(Dispatchers.IO) { subprocess("logcat", "--clear") }
-                }
-                RimeMessage.DeployMessage.State.Success -> {
-                    sendNotification(MESSAGE_ID + 1) {
-                        setSmallIcon(R.drawable.ic_baseline_sync_24)
-                        setColor(Color.GREEN)
-                        setContentText(appContext.getString(R.string.deploy_finish))
-                        setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                        setTimeoutAfter(2000L)
-                    }
-                }
-                RimeMessage.DeployMessage.State.Failure -> {
-                    val intent =
-                        Intent(appContext, LogActivity::class.java).apply {
-                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            val log =
-                                subprocess("logcat", "-v", "brief", "-s", "rime.trime:W", "-d")
-                                    .readText()
-                            putExtra(LogActivity.FROM_DEPLOY, true)
-                            putExtra(LogActivity.DEPLOY_FAILURE_TRACE, log)
-                        }
-                    sendNotification(MESSAGE_ID + 2) {
-                        setSmallIcon(R.drawable.ic_baseline_warning_24)
-                        setColor(Color.YELLOW)
-                        setContentText(appContext.getString(R.string.view_deploy_failure_log))
-                        setContentIntent(
-                            PendingIntent.getActivity(
-                                appContext,
-                                0,
-                                intent,
-                                PendingIntent.FLAG_ONE_SHOT or
-                                    PendingIntent.FLAG_IMMUTABLE,
-                            ),
-                        )
-                        setOngoing(false)
-                        setAutoCancel(true)
-                        setPriority(NotificationCompat.PRIORITY_HIGH)
-                    }
-                }
-            }
-        }
-    }
 }

@@ -2,6 +2,9 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+import ApkRelease.buildApkRelease
+import Versions.cmakeVersion
+import Versions.ndkVersion
 import org.gradle.api.DefaultTask
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -31,7 +34,9 @@ class NativeCacheHashPlugin : Plugin<Project> {
                     buildString {
                         appendLine(cmakeVersion)
                         appendLine(ndkVersion)
-                        appendLine(buildAbiOverride)
+                        if (!buildApkRelease) {
+                            appendLine(buildABI)
+                        }
                         appendLine(runCmd("git submodule status"))
                         fileTree("src/main/jni/cmake").forEach { module ->
                             appendLine(sha256(module))

@@ -5,9 +5,9 @@
 package com.osfans.trime.data.db
 
 import android.content.Context
-import android.view.inputmethod.InputConnection
 import androidx.room.Room
 import com.osfans.trime.data.prefs.AppPrefs
+import com.osfans.trime.ime.core.TrimeInputMethodService
 import com.osfans.trime.util.matchesAny
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,14 +30,12 @@ object DraftHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dispatch
         itemCount = dftDao.itemCount()
     }
 
-    private val limit by AppPrefs.defaultInstance().clipboard.draftLimit
-    private val output by lazy {
-        val rules by AppPrefs.defaultInstance().clipboard.draftOutputRules
-        rules
+    private val limit get() = AppPrefs.defaultInstance().clipboard.draftLimit
+    private val output get() =
+        AppPrefs.defaultInstance().clipboard.draftOutputRules
             .split('\n')
             .map { Regex(it) }
             .toHashSet()
-    }
 
     var lastBean: DatabaseBean? = null
 
@@ -53,8 +51,6 @@ object DraftHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dispatch
 
     suspend fun get(id: Int) = dftDao.get(id)
 
-    suspend fun haveUnpinned() = dftDao.haveUnpinned()
-
     suspend fun getAll() = dftDao.getAll()
 
     suspend fun pin(id: Int) = dftDao.updatePinned(id, true)
@@ -64,12 +60,7 @@ object DraftHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dispatch
     suspend fun updateText(
         id: Int,
         text: String,
-    ) {
-        lastBean?.let {
-            if (id == it.id) lastBean = it.copy(text = text)
-        }
-        dftDao.updateText(id, text)
-    }
+    ) = dftDao.updateText(id, text)
 
     suspend fun delete(id: Int) {
         dftDao.delete(id)
@@ -82,27 +73,29 @@ object DraftHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dispatch
         } else {
             dftDao.deleteAll()
         }
-        updateItemCount()
     }
 
-    fun onExtractedTextChanged(inputConnection: InputConnection) {
+    fun onInputEventChanged() {
         if (!(limit != 0 && this::dftDao.isInitialized)) return
 
-        inputConnection
-            .let { DatabaseBean.fromInputConnection(it) }
+        TrimeInputMethodService.getServiceOrNull()
+            ?.currentInputConnection
+            ?.let { DatabaseBean.fromInputConnection(it) }
             ?.takeIf {
                 it.text!!.isNotBlank() &&
                     !it.text.matchesAny(output)
-            }?.let { b ->
-                Timber.d("Accept draft $b")
+            }
+            ?.let { b ->
+                Timber.d("Accept $b")
                 launch {
                     mutex.withLock {
-                        dftDao.find(b.text!!)?.let {
-                            lastBean = it.copy(time = b.time)
-                            dftDao.updateTime(it.id, b.time)
-                            return@launch
+                        val all = dftDao.getAll()
+                        var pinned = false
+                        all.find { b.text == it.text }?.let {
+                            dftDao.delete(it.id)
+                            pinned = it.pinned
                         }
-                        val rowId = dftDao.insert(b)
+                        val rowId = dftDao.insert(b.copy(pinned = pinned))
                         removeOutdated()
                         updateItemCount()
                         dftDao.get(rowId)?.let { lastBean = it }
@@ -112,13 +105,20 @@ object DraftHelper : CoroutineScope by CoroutineScope(SupervisorJob() + Dispatch
     }
 
     private suspend fun removeOutdated() {
-        val unpinned = dftDao.getAllUnpinned()
-        if (unpinned.size > limit) {
+        val all = dftDao.getAll()
+        if (all.size > limit) {
             val outdated =
-                unpinned
+                all
+                    .map {
+                        if (it.pinned) {
+                            it.copy(id = Int.MAX_VALUE)
+                        } else {
+                            it
+                        }
+                    }
                     .sortedBy { it.id }
-                    .getOrNull(unpinned.size - limit)
-            dftDao.deletedUnpinnedEarlierThan(outdated?.time ?: System.currentTimeMillis())
+                    .subList(0, all.size - limit)
+            dftDao.delete(outdated)
         }
     }
 }

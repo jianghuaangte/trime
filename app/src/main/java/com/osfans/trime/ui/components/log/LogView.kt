@@ -6,23 +6,20 @@ package com.osfans.trime.ui.components.log
 
 import android.content.Context
 import android.util.AttributeSet
+import android.view.ViewGroup
 import android.widget.HorizontalScrollView
 import androidx.core.content.ContextCompat
 import androidx.core.text.buildSpannedString
 import androidx.core.text.color
 import androidx.lifecycle.findViewTreeLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.osfans.trime.R
 import com.osfans.trime.util.Logcat
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import splitties.resources.styledColor
-import splitties.views.dsl.core.add
-import splitties.views.dsl.core.lParams
-import splitties.views.dsl.core.matchParent
-import splitties.views.dsl.core.wrapContent
-import splitties.views.dsl.recyclerview.recyclerView
-import splitties.views.recyclerview.verticalLayoutManager
 
 /**
  * A scroll view to look up the app log.
@@ -33,30 +30,40 @@ import splitties.views.recyclerview.verticalLayoutManager
  */
 class LogView
     @JvmOverloads
-    constructor(
-        context: Context,
-        attributeSet: AttributeSet? = null,
-    ) : HorizontalScrollView(context, attributeSet) {
+    constructor(context: Context, attributeSet: AttributeSet? = null) :
+    HorizontalScrollView(context, attributeSet) {
         private var logcat: Logcat? = null
 
         private val logAdapter = LogAdapter()
 
         private val recyclerView =
-            recyclerView {
+            RecyclerView(context).apply {
                 adapter = logAdapter
-                layoutManager = verticalLayoutManager()
+                layoutManager =
+                    LinearLayoutManager(context).apply {
+                        orientation = LinearLayoutManager.VERTICAL
+                    }
             }
 
         init {
-            add(
+            addView(
                 recyclerView,
-                lParams(wrapContent, matchParent),
+                LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                ),
             )
         }
 
         override fun onDetachedFromWindow() {
             logcat?.shutdownLogFlow()
             super.onDetachedFromWindow()
+        }
+
+        fun fromCustomLogLines(lines: List<String>) {
+            lines.onEach {
+                dyeAndAppendString(it)
+            }
         }
 
         fun append(content: String) {
@@ -70,12 +77,12 @@ class LogView
         fun setLogcat(logcat: Logcat) {
             this.logcat = logcat
             logcat.initLogFlow()
-            logcat.logFlow
-                .onEach(::buildColoredString)
-                .launchIn(findViewTreeLifecycleOwner()!!.lifecycleScope)
+            logcat.logFlow.onEach {
+                dyeAndAppendString(it)
+            }.launchIn(findViewTreeLifecycleOwner()!!.lifecycleScope)
         }
 
-        private fun buildColoredString(str: String) {
+        private fun dyeAndAppendString(str: String) {
             val color =
                 ContextCompat.getColor(
                     context,

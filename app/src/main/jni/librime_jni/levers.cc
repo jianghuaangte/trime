@@ -7,81 +7,80 @@
 #include "jni-utils.h"
 #include "objconv.h"
 
-static RimeLeversApi *rime_get_levers_api() {
-  return (RimeLeversApi *)rime_get_api()->find_module("levers")->get_api();
+// customize settings
+
+static RimeLeversApi *get_levers() {
+  return (RimeLeversApi *)(RimeFindModule("levers")->get_api());
 }
-
-class SwitcherSettings {
- public:
-  SwitcherSettings()
-      : levers(rime_get_levers_api()),
-        switcher(rime_get_levers_api()->switcher_settings_init()) {
-    levers->load_settings((RimeCustomSettings *)switcher);
-  }
-  ~SwitcherSettings() {
-    if (switcher)
-      levers->custom_settings_destroy((RimeCustomSettings *)switcher);
-  }
-
-  std::vector<SchemaItem> availableSchemas() {
-    std::vector<SchemaItem> result;
-    RimeSchemaList list{};
-    if (levers->get_available_schema_list(switcher, &list)) {
-      result = SchemaItem::fromCList(list);
-      levers->schema_list_destroy(&list);
-    }
-    return std::move(result);
-  }
-
-  std::vector<SchemaItem> selectedSchemas() {
-    std::vector<SchemaItem> result;
-    RimeSchemaList list{};
-    if (levers->get_selected_schema_list(switcher, &list)) {
-      result = SchemaItem::fromCList(list);
-      levers->schema_list_destroy(&list);
-    }
-    return std::move(result);
-  }
-
-  bool selectSchemas(const std::vector<std::string> &schemas) {
-    auto length = schemas.size();
-    const char **input = new const char *[length];
-    int i = 0;
-    for (const auto &id : schemas) {
-      input[i++] = id.c_str();
-    }
-    bool result =
-        levers->select_schemas(switcher, input, static_cast<int>(length));
-    if (result) {
-      levers->save_settings((RimeCustomSettings *)switcher);
-    }
-    delete[] input;
-    return result;
-  }
-
- private:
-  RimeLeversApi *levers;
-  RimeSwitcherSettings *switcher;
-};
 
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_osfans_trime_core_Rime_getAvailableRimeSchemaList(JNIEnv *env,
                                                            jclass /* thiz */) {
-  SwitcherSettings switcher;
-  return rimeSchemaListToJObjectArray(env, switcher.availableSchemas());
+  auto levers = get_levers();
+  auto switcher = levers->switcher_settings_init();
+  RimeSchemaList list = {0};
+  levers->load_settings((RimeCustomSettings *)switcher);
+  levers->get_available_schema_list(switcher, &list);
+  auto array = rimeSchemaListToJObjectArray(env, list);
+  levers->schema_list_destroy(&list);
+  levers->custom_settings_destroy((RimeCustomSettings *)switcher);
+  return array;
 }
 
 extern "C" JNIEXPORT jobjectArray JNICALL
 Java_com_osfans_trime_core_Rime_getSelectedRimeSchemaList(JNIEnv *env,
                                                           jclass /* thiz */) {
-  SwitcherSettings switcher;
-  return rimeSchemaListToJObjectArray(env, switcher.selectedSchemas());
+  auto levers = get_levers();
+  auto switcher = levers->switcher_settings_init();
+  RimeSchemaList list = {0};
+  levers->load_settings((RimeCustomSettings *)switcher);
+  levers->get_selected_schema_list(switcher, &list);
+  auto array = rimeSchemaListToJObjectArray(env, list);
+  levers->schema_list_destroy(&list);
+  levers->custom_settings_destroy((RimeCustomSettings *)switcher);
+  return array;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_com_osfans_trime_core_Rime_selectRimeSchemas(JNIEnv *env,
                                                   jclass /* thiz */,
                                                   jobjectArray array) {
-  SwitcherSettings switcher;
-  return switcher.selectSchemas(stringArrayToStringVector(env, array));
+  int schemaIdsLength = env->GetArrayLength(array);
+  const char *entries[schemaIdsLength];
+  for (int i = 0; i < schemaIdsLength; i++) {
+    auto string = JRef<jstring>(env, env->GetObjectArrayElement(array, i));
+    entries[i] = env->GetStringUTFChars(string, nullptr);
+  }
+  auto levers = get_levers();
+  auto switcher = levers->switcher_settings_init();
+  levers->load_settings((RimeCustomSettings *)switcher);
+  levers->select_schemas(switcher, entries, schemaIdsLength);
+  levers->save_settings((RimeCustomSettings *)switcher);
+  levers->custom_settings_destroy((RimeCustomSettings *)switcher);
+  for (int i = 0; i < schemaIdsLength; i++) {
+    auto string = JRef<jstring>(env, env->GetObjectArrayElement(array, i));
+    env->ReleaseStringUTFChars(string, entries[i]);
+  }
+  return true;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_osfans_trime_core_Rime_setRimeCustomConfigInt(
+    JNIEnv *env, jclass clazz, jstring config_id,
+    jobjectArray key_value_pairs) {
+  auto levers = get_levers();
+  auto custom =
+      levers->custom_settings_init(CString(env, config_id), "rime.trime");
+  levers->load_settings(custom);
+  int arrayLength = env->GetArrayLength(key_value_pairs);
+  for (int i = 0; i < arrayLength; i++) {
+    auto pair = JRef<>(env, env->GetObjectArrayElement(key_value_pairs, i));
+    auto key = CString(
+        env, (jstring)env->CallObjectMethod(pair, GlobalRef->PairFirst));
+    auto value =
+        extract_int(env, env->CallObjectMethod(pair, GlobalRef->PairSecond));
+    levers->customize_int(custom, key, value);
+    levers->save_settings(custom);
+  }
+  levers->custom_settings_destroy(custom);
 }

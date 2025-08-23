@@ -20,7 +20,7 @@ SPDX-License-Identifier: GPL-3.0-or-later
     android:focusable="true" >
 
     <TextView
-        android:id="@+id/first"
+        android:id="@+id/candidate"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
@@ -28,24 +28,26 @@ SPDX-License-Identifier: GPL-3.0-or-later
         android:gravity="center"
         android:ellipsize="end"
         android:maxLines="3"
+        android:text="Candidate"
         android:textColor="#333333"
         android:textSize="14sp"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/second"
+        app:layout_constraintEnd_toStartOf="@id/comment"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
 
     <TextView
-        android:id="@+id/second"
+        android:id="@+id/comment"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:gravity="center"
         android:ellipsize="end"
         android:maxLines="3"
+        android:text="Comment"
         android:textColor="#333333"
         android:textSize="12sp"
-        app:layout_constraintStart_toEndOf="@id/first"
+        app:layout_constraintStart_toEndOf="@id/candidate"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="@id/first"/>
+        app:layout_constraintBottom_toBottomOf="@id/candidate"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

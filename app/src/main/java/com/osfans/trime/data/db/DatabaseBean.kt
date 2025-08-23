@@ -42,9 +42,9 @@ data class DatabaseBean(
 
     class Converters {
         @TypeConverter
-        fun beanTypeToInt(beanType: BeanType?): Int? = beanType?.ordinal
+        fun BeanType?.toInt(): Int? = this?.ordinal
 
         @TypeConverter
-        fun intToBeanType(ordinal: Int?): BeanType? = ordinal?.let { BeanType.entries[it] }
+        fun Int?.toBeanType(): BeanType? = this?.let { BeanType.values()[it] }
     }
 }

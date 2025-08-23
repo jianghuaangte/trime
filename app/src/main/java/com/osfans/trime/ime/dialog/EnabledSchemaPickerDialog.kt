@@ -20,31 +20,29 @@ object EnabledSchemaPickerDialog {
         extensions: (AlertDialog.Builder.() -> AlertDialog.Builder)? = null,
     ): AlertDialog {
         val selecteds = rime.selectedSchemata()
-        val selectedNames = selecteds.map { it.name }
-        val selectedIds = selecteds.map { it.id }
+        val selectedNames = selecteds.mapNotNull { it.name }
+        val selectedIds = selecteds.mapNotNull { it.schemaId }
         val selectedSchemaId = rime.selectedSchemaId()
-        val selectedIndex = selecteds.indexOfFirst { it.id == selectedSchemaId }
-        return AlertDialog
-            .Builder(context)
-            .apply {
-                setTitle(R.string.select_current_schema)
-                if (rime.isEmpty()) {
-                    setMessage(R.string.no_schema_to_select)
-                } else {
-                    setSingleChoiceItems(
-                        selectedNames.toTypedArray(),
-                        selectedIndex,
-                    ) { dialog, which ->
-                        scope.launch {
-                            rime.selectSchema(selectedIds[which])
-                            dialog.dismiss()
-                        }
+        val selectedIndex = selecteds.indexOfFirst { it.schemaId == selectedSchemaId }
+        return AlertDialog.Builder(context).apply {
+            setTitle(R.string.select_current_schema)
+            if (rime.isEmpty()) {
+                setMessage(R.string.no_schema_to_select)
+            } else {
+                setSingleChoiceItems(
+                    selectedNames.toTypedArray(),
+                    selectedIndex,
+                ) { dialog, which ->
+                    scope.launch {
+                        rime.selectSchema(selectedIds[which])
+                        dialog.dismiss()
                     }
                 }
-                setNeutralButton(R.string.other_ime) { _, _ ->
-                    inputMethodManager.showInputMethodPicker()
-                }
-                extensions?.invoke(this)
-            }.create()
+            }
+            setNeutralButton(R.string.other_ime) { _, _ ->
+                inputMethodManager.showInputMethodPicker()
+            }
+            extensions?.invoke(this)
+        }.create()
     }
 }

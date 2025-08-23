@@ -1,12 +1,11 @@
-/*
- * SPDX-FileCopyrightText: 2015 - 2025 Rime community
- *
- * SPDX-License-Identifier: GPL-3.0-or-later
- */
-#pragma once
+// SPDX-FileCopyrightText: 2015 - 2024 Rime community
+//
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+#ifndef TRIME_JNI_UTILS_H
+#define TRIME_JNI_UTILS_H
 
 #include <jni.h>
-#include <utf8.h>
 
 #include <string>
 
@@ -14,6 +13,12 @@ static inline void throwJavaException(JNIEnv *env, const char *msg) {
   jclass c = env->FindClass("java/lang/Exception");
   env->ThrowNew(c, msg);
   env->DeleteLocalRef(c);
+}
+
+static inline jint extract_int(JNIEnv *env, jobject f) {
+  return env->CallIntMethod(
+      f,
+      env->GetMethodID(env->FindClass("java/lang/Integer"), "intValue", "()I"));
 }
 
 class CString {
@@ -56,16 +61,9 @@ class JString {
   JNIEnv *env_;
   jstring jstring_;
 
-  static inline jstring toJString(JNIEnv *env, const char *chars) {
-    if (chars == nullptr) return nullptr;
-    auto u16str = utf8::utf8to16(chars);
-    return env->NewString(reinterpret_cast<const jchar *>(u16str.data()),
-                          static_cast<int>(u16str.length()));
-  }
-
  public:
   JString(JNIEnv *env, const char *chars)
-      : env_(env), jstring_(toJString(env, chars)) {}
+      : env_(env), jstring_(env->NewStringUTF(chars)) {}
 
   JString(JNIEnv *env, const std::string &string)
       : JString(env, string.c_str()) {}
@@ -77,12 +75,28 @@ class JString {
   jstring operator*() { return jstring_; }
 };
 
-class JEnv {
+class JClass {
  private:
-  JNIEnv *env = nullptr;
+  JNIEnv *env_;
+  jclass jclass_;
 
  public:
-  explicit JEnv(JavaVM *jvm) {
+  JClass(JNIEnv *env, const char *name)
+      : env_(env), jclass_(env->FindClass(name)) {}
+
+  ~JClass() { env_->DeleteLocalRef(jclass_); }
+
+  operator jclass() { return jclass_; }
+
+  jclass operator*() { return jclass_; }
+};
+
+class JEnv {
+ private:
+  JNIEnv *env;
+
+ public:
+  JEnv(JavaVM *jvm) {
     if (jvm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) ==
         JNI_EDETACHED) {
       jvm->AttachCurrentThread(&env, nullptr);
@@ -108,39 +122,43 @@ class GlobalRefSingleton {
   jclass Boolean;
   jmethodID BooleanInit;
 
+  jclass HashMap;
+  jmethodID HashMapInit;
+  jmethodID HashMapPut;
+
+  jclass ArrayList;
+  jmethodID ArrayListInit;
+  jmethodID ArrayListAdd;
+
+  jclass Pair;
+  jmethodID PairFirst;
+  jmethodID PairSecond;
+
   jclass Rime;
-  jmethodID HandleRimeMessage;
+  jmethodID HandleRimeNotification;
 
-  jclass CandidateItem;
-  jmethodID CandidateItemInit;
+  jclass RimeComposition;
+  jmethodID RimeCompositionInit;
 
-  jclass CandidateProto;
-  jmethodID CandidateProtoInit;
+  jclass CandidateListItem;
+  jmethodID CandidateListItemInit;
 
-  jclass CommitProto;
-  jmethodID CommitProtoInit;
+  jclass RimeCommit;
+  jmethodID RimeCommitInit;
 
-  jclass ContextProto;
-  jmethodID ContextProtoInit;
+  jclass RimeContext;
+  jmethodID RimeContextInit;
 
-  jclass CompositionProto;
-  jmethodID CompositionProtoInit;
-  jmethodID CompositionProtoDefault;
+  jclass RimeMenu;
+  jmethodID RimeMenuInit;
 
-  jclass MenuProto;
-  jmethodID MenuProtoInit;
-  jmethodID MenuProtoDefault;
-
-  jclass StatusProto;
-  jmethodID StatusProtoInit;
+  jclass RimeStatus;
+  jmethodID RimeStatusInit;
 
   jclass SchemaListItem;
   jmethodID SchemaListItemInit;
 
-  jclass KeyEvent;
-  jmethodID KeyEventInit;
-
-  explicit GlobalRefSingleton(JavaVM *jvm_) : jvm(jvm_) {
+  GlobalRefSingleton(JavaVM *jvm_) : jvm(jvm_) {
     JNIEnv *env;
     jvm->AttachCurrentThread(&env, nullptr);
 
@@ -158,69 +176,71 @@ class GlobalRefSingleton {
         env->NewGlobalRef(env->FindClass("java/lang/Boolean")));
     BooleanInit = env->GetMethodID(Boolean, "<init>", "(Z)V");
 
+    HashMap = reinterpret_cast<jclass>(
+        env->NewGlobalRef(env->FindClass("java/util/HashMap")));
+    HashMapInit = env->GetMethodID(HashMap, "<init>", "()V");
+    HashMapPut = env->GetMethodID(
+        HashMap, "put",
+        "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+
+    ArrayList = reinterpret_cast<jclass>(
+        env->NewGlobalRef(env->FindClass("java/util/ArrayList")));
+    ArrayListInit = env->GetMethodID(ArrayList, "<init>", "(I)V");
+    ArrayListAdd = env->GetMethodID(ArrayList, "add", "(ILjava/lang/Object;)V");
+
+    Pair = reinterpret_cast<jclass>(
+        env->NewGlobalRef(env->FindClass("kotlin/Pair")));
+    PairFirst = env->GetMethodID(Pair, "getFirst", "()Ljava/lang/Object;");
+    PairSecond = env->GetMethodID(Pair, "getSecond", "()Ljava/lang/Object;");
+
     Rime = reinterpret_cast<jclass>(
         env->NewGlobalRef(env->FindClass("com/osfans/trime/core/Rime")));
-    HandleRimeMessage = env->GetStaticMethodID(Rime, "handleRimeMessage",
-                                               "(I[Ljava/lang/Object;)V");
+    HandleRimeNotification =
+        env->GetStaticMethodID(Rime, "handleRimeNotification",
+                               "(Ljava/lang/String;Ljava/lang/String;)V");
 
-    CandidateItem = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/CandidateItem")));
-    CandidateItemInit = env->GetMethodID(
-        CandidateItem, "<init>", "(Ljava/lang/String;Ljava/lang/String;)V");
+    RimeComposition = reinterpret_cast<jclass>(env->NewGlobalRef(
+        env->FindClass("com/osfans/trime/core/RimeComposition")));
+    RimeCompositionInit = env->GetMethodID(RimeComposition, "<init>",
+                                           "(IIIILjava/lang/String;)V");
 
-    CandidateProto = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/RimeProto$Candidate")));
-    CandidateProtoInit = env->GetMethodID(
-        CandidateProto, "<init>",
-        "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V");
+    CandidateListItem = reinterpret_cast<jclass>(env->NewGlobalRef(
+        env->FindClass("com/osfans/trime/core/CandidateListItem")));
+    CandidateListItemInit = env->GetMethodID(
+        CandidateListItem, "<init>", "(Ljava/lang/String;Ljava/lang/String;)V");
 
-    CommitProto = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/RimeProto$Commit")));
-    CommitProtoInit =
-        env->GetMethodID(CommitProto, "<init>", "(Ljava/lang/String;)V");
+    RimeCommit = reinterpret_cast<jclass>(
+        env->NewGlobalRef(env->FindClass("com/osfans/trime/core/RimeCommit")));
+    RimeCommitInit =
+        env->GetMethodID(RimeCommit, "<init>", "(Ljava/lang/String;)V");
 
-    ContextProto = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/RimeProto$Context")));
-    ContextProtoInit = env->GetMethodID(
-        ContextProto, "<init>",
-        "(Lcom/osfans/trime/core/RimeProto$Context$Composition;Lcom/osfans/"
-        "trime/core/"
-        "RimeProto$Context$Menu;Ljava/lang/String;I)V");
+    RimeContext = reinterpret_cast<jclass>(
+        env->NewGlobalRef(env->FindClass("com/osfans/trime/core/RimeContext")));
+    RimeContextInit = env->GetMethodID(
+        RimeContext, "<init>",
+        "(Lcom/osfans/trime/core/RimeComposition;Lcom/osfans/trime/core/"
+        "RimeMenu;Ljava/lang/String;[Ljava/lang/String;)V");
 
-    CompositionProto = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/RimeProto$Context$Composition")));
-    CompositionProtoInit =
-        env->GetMethodID(CompositionProto, "<init>",
-                         "(IIIILjava/lang/String;Ljava/lang/String;)V");
-    CompositionProtoDefault =
-        env->GetMethodID(CompositionProto, "<init>", "()V");
+    RimeMenu = reinterpret_cast<jclass>(
+        env->NewGlobalRef(env->FindClass("com/osfans/trime/core/RimeMenu")));
+    RimeMenuInit =
+        env->GetMethodID(RimeMenu, "<init>",
+                         "(IIZII[Lcom/osfans/trime/core/CandidateListItem;)V");
 
-    MenuProto = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/RimeProto$Context$Menu")));
-    MenuProtoInit = env->GetMethodID(
-        MenuProto, "<init>",
-        "(IIZI[Lcom/osfans/trime/core/RimeProto$Candidate;Ljava/lang/"
-        "String;[Ljava/lang/String;)V");
-    MenuProtoDefault = env->GetMethodID(MenuProto, "<init>", "()V");
+    RimeStatus = reinterpret_cast<jclass>(
+        env->NewGlobalRef(env->FindClass("com/osfans/trime/core/RimeStatus")));
+    RimeStatusInit = env->GetMethodID(
+        RimeStatus, "<init>", "(Ljava/lang/String;Ljava/lang/String;ZZZZZZZ)V");
 
-    StatusProto = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/RimeProto$Status")));
-    StatusProtoInit =
-        env->GetMethodID(StatusProto, "<init>",
-                         "(Ljava/lang/String;Ljava/lang/String;ZZZZZZZ)V");
-
-    SchemaListItem = reinterpret_cast<jclass>(
-        env->NewGlobalRef(env->FindClass("com/osfans/trime/core/SchemaItem")));
+    SchemaListItem = reinterpret_cast<jclass>(env->NewGlobalRef(
+        env->FindClass("com/osfans/trime/core/SchemaListItem")));
     SchemaListItemInit = env->GetMethodID(
         SchemaListItem, "<init>", "(Ljava/lang/String;Ljava/lang/String;)V");
-
-    KeyEvent = reinterpret_cast<jclass>(env->NewGlobalRef(
-        env->FindClass("com/osfans/trime/core/RimeKeyEvent")));
-    KeyEventInit =
-        env->GetMethodID(KeyEvent, "<init>", "(IILjava/lang/String;)V");
   }
 
-  [[nodiscard]] JEnv AttachEnv() const { return JEnv(jvm); }
+  const JEnv AttachEnv() const { return JEnv(jvm); }
 };
 
 extern GlobalRefSingleton *GlobalRef;
+
+#endif  // TRIME_JNI_UTILS_H

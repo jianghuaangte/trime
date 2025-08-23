@@ -9,11 +9,10 @@ import android.content.Context
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.setPadding
 import com.osfans.trime.data.theme.ColorManager
+import com.osfans.trime.data.theme.EventManager
 import com.osfans.trime.data.theme.FontManager
-import com.osfans.trime.data.theme.KeyActionManager
 import com.osfans.trime.data.theme.Theme
-import com.osfans.trime.data.theme.model.LiquidKeyboard
-import com.osfans.trime.ime.keyboard.CommonKeyboardActionListener
+import com.osfans.trime.ime.core.TrimeInputMethodService
 import splitties.dimensions.dp
 import splitties.views.dsl.constraintlayout.above
 import splitties.views.dsl.constraintlayout.after
@@ -43,36 +42,35 @@ import splitties.views.gravityCenter
 import splitties.views.padding
 
 @SuppressLint("ViewConstructor")
-class LiquidLayout(
-    context: Context,
-    theme: Theme,
-    commonKeyboardActionListener: CommonKeyboardActionListener,
-) : ConstraintLayout(context) {
+class LiquidLayout(context: Context, service: TrimeInputMethodService, theme: Theme) :
+    ConstraintLayout(context) {
     // TODO: 继承一个键盘视图嵌入到这里，而不是自定义一个视图
     private val fixedKeyBar =
         constraintLayout {
-            val fixedKeys =
-                theme.liquidKeyboard.fixedKeyBar.keys
-            if (fixedKeys.isNotEmpty()) {
+            val fixedKeys = theme.liquid.getMap("fixed_key_bar")?.get("keys")?.configList
+            fixedKeys?.let {
                 val btns =
-                    Array(fixedKeys.size) { index ->
-                        val presetKeyName = fixedKeys[index]
+                    Array(it.size) { index ->
+                        val operation = fixedKeys[index]
                         val text =
                             textView {
                                 text =
-                                    theme.presetKeys[presetKeyName]?.label ?: ""
-                                textSize = theme.generalStyle.labelTextSize
+                                    theme.presetKeys?.get(operation.toString())?.configMap?.get("label")
+                                        .toString()
+                                textSize = theme.generalStyle.labelTextSize.toFloat()
                                 typeface = FontManager.getTypeface("key_font")
-                                setTextColor(ColorManager.getColor("key_text_color"))
+                                ColorManager.getColor("key_text_color")
+                                    ?.let { color -> setTextColor(color) }
                             }
                         val root =
                             frameLayout {
                                 background =
                                     ColorManager.getDrawable(
-                                        "key_back_color",
-                                        "key_border_color",
-                                        dp(theme.generalStyle.keyBorder),
-                                        dp(theme.generalStyle.roundCorner),
+                                        context,
+                                        key = "key_back_color",
+                                        border = theme.generalStyle.keyBorder,
+                                        borderColorKey = "key_border_color",
+                                        roundCorner = theme.generalStyle.roundCorner,
                                     )
                                 add(
                                     text,
@@ -83,20 +81,21 @@ class LiquidLayout(
                                 )
                                 // todo 想办法实现退格键、空格键等 repeatable: true 长按连续触发
                                 setOnClickListener {
-                                    val event = KeyActionManager.getAction(presetKeyName)
-                                    commonKeyboardActionListener.listener.run {
+                                    val event = EventManager.getEvent(operation.toString())
+                                    service.textInputManager?.run {
                                         onPress(event.code)
-                                        onAction(event)
+                                        onEvent(event)
                                     }
                                 }
                             }
                         return@Array root
                     }
-                val marginX = theme.liquidKeyboard.marginX
-                when (theme.liquidKeyboard.fixedKeyBar.position) {
-                    LiquidKeyboard.KeyBar.Position.LEFT,
-                    LiquidKeyboard.KeyBar.Position.RIGHT,
-                    -> {
+                val marginX = theme.liquid.getFloat("margin_x")
+                when (
+                    theme.liquid.getMap("fixed_key_bar")
+                        ?.get("position")?.configValue.toString()
+                ) {
+                    LEFT, RIGHT -> {
                         btns.forEachIndexed { i, btn ->
                             add(
                                 btn,
@@ -117,9 +116,8 @@ class LiquidLayout(
                             )
                         }
                     }
-                    LiquidKeyboard.KeyBar.Position.TOP,
-                    LiquidKeyboard.KeyBar.Position.BOTTOM,
-                    -> {
+
+                    TOP, BOTTOM -> {
                         btns.forEachIndexed { i, btn ->
                             add(
                                 btn,
@@ -154,8 +152,8 @@ class LiquidLayout(
     val tabsUi = LiquidTabsUi(context, theme)
 
     init {
-        when (theme.liquidKeyboard.fixedKeyBar.position) {
-            LiquidKeyboard.KeyBar.Position.TOP -> {
+        when (theme.liquid.getMap("fixed_key_bar")?.get("position")?.configValue.toString() ?: "") {
+            TOP -> {
                 add(
                     boardView,
                     lParams {
@@ -173,7 +171,8 @@ class LiquidLayout(
                     },
                 )
             }
-            LiquidKeyboard.KeyBar.Position.BOTTOM -> {
+
+            BOTTOM -> {
                 add(
                     boardView,
                     lParams {
@@ -191,7 +190,8 @@ class LiquidLayout(
                     },
                 )
             }
-            LiquidKeyboard.KeyBar.Position.LEFT -> {
+
+            LEFT -> {
                 add(
                     boardView,
                     lParams {
@@ -209,7 +209,8 @@ class LiquidLayout(
                     },
                 )
             }
-            LiquidKeyboard.KeyBar.Position.RIGHT -> {
+
+            RIGHT -> {
                 add(
                     boardView,
                     lParams {
@@ -227,6 +228,24 @@ class LiquidLayout(
                     },
                 )
             }
+
+            else -> {
+                add(
+                    boardView,
+                    lParams {
+                        centerVertically()
+                        startOfParent()
+                        endOfParent()
+                    },
+                )
+            }
         }
+    }
+
+    companion object {
+        private const val TOP = "top"
+        private const val BOTTOM = "bottom"
+        private const val LEFT = "left"
+        private const val RIGHT = "right"
     }
 }

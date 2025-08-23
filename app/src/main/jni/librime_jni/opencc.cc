@@ -13,6 +13,12 @@
 // opencc
 
 extern "C" JNIEXPORT jstring JNICALL
+Java_com_osfans_trime_data_opencc_OpenCCDictManager_getOpenCCVersion(
+    JNIEnv *env, jclass clazz) {
+  return env->NewStringUTF(OPENCC_VERSION);
+}
+
+extern "C" JNIEXPORT jstring JNICALL
 Java_com_osfans_trime_data_opencc_OpenCCDictManager_openCCLineConv(
     JNIEnv *env, jclass clazz, jstring input, jstring config_file_name) {
   try {

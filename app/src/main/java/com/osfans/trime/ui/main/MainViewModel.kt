@@ -16,14 +16,6 @@ class MainViewModel : ViewModel() {
 
     val rime: RimeSession = RimeDaemon.createSession(javaClass.name)
 
-    val restartBackgroundSyncWork = MutableLiveData(false)
-
-    val toolbarEditButtonVisible = MutableLiveData(false)
-
-    val toolbarEditButtonOnClickListener = MutableLiveData<(() -> Unit)?>()
-
-    val toolbarDeleteButtonOnClickListener = MutableLiveData<(() -> Unit)?>()
-
     fun setToolbarTitle(title: String) {
         toolbarTitle.value = title
     }
@@ -34,35 +26,6 @@ class MainViewModel : ViewModel() {
 
     fun disableTopOptionsMenu() {
         topOptionsMenu.value = false
-    }
-
-    fun enableToolbarEditButton(
-        visible: Boolean = true,
-        onClick: () -> Unit,
-    ) {
-        toolbarEditButtonOnClickListener.value = onClick
-        toolbarEditButtonVisible.value = visible
-    }
-
-    fun disableToolbarEditButton() {
-        toolbarEditButtonOnClickListener.value = null
-        hideToolbarEditButton()
-    }
-
-    fun hideToolbarEditButton() {
-        toolbarEditButtonVisible.value = false
-    }
-
-    fun showToolbarEditButton() {
-        toolbarEditButtonVisible.value = true
-    }
-
-    fun enableToolbarDeleteButton(onClick: () -> Unit) {
-        toolbarDeleteButtonOnClickListener.value = onClick
-    }
-
-    fun disableToolbarDeleteButton() {
-        toolbarDeleteButtonOnClickListener.value = null
     }
 
     override fun onCleared() {

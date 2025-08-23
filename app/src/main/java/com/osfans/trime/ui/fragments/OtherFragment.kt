@@ -40,6 +40,7 @@ class OtherFragment : PaddingPreferenceFragment() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.setToolbarTitle(getString(R.string.pref_other))
         viewModel.disableTopOptionsMenu()
     }
 
@@ -50,7 +51,7 @@ class OtherFragment : PaddingPreferenceFragment() {
 
     private fun updateLauncherIconStatus() {
         // Set LauncherAlias enabled/disabled state just before destroying/pausing this activity
-        if (prefs.other.showAppIcon.getValue()) {
+        if (prefs.other.showAppIcon) {
             showAppIcon(requireContext())
         } else {
             hideAppIcon(requireContext())

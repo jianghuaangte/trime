@@ -9,40 +9,38 @@ import android.content.Context
 import androidx.lifecycle.LifecycleCoroutineScope
 import com.osfans.trime.R
 import com.osfans.trime.data.theme.ColorManager
-import com.osfans.trime.data.theme.ThemeManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 object ColorPickerDialog {
-    fun build(
+    suspend fun build(
         scope: LifecycleCoroutineScope,
         context: Context,
-        afterConfirm: (suspend () -> Unit)? = null,
     ): AlertDialog {
-        val presetSchemes = ThemeManager.activeTheme.colorSchemes
-        val currentScheme = ColorManager.activeColorScheme
-        val currentIndex = presetSchemes.indexOfFirst { it.id == currentScheme.id }
-        return AlertDialog
-            .Builder(context)
-            .apply {
-                setTitle(R.string.normal_mode_color)
-                if (presetSchemes.isEmpty()) {
-                    setMessage(R.string.no_color_to_select)
-                } else {
-                    setSingleChoiceItems(
-                        presetSchemes.map { it.colors["name"] }.toTypedArray(),
-                        currentIndex,
-                    ) { dialog, which ->
-                        scope.launch {
-                            afterConfirm?.invoke()
-                            if (which != currentIndex) {
-                                val newScheme = presetSchemes[which]
-                                ColorManager.setColorScheme(newScheme)
-                            }
-                            dialog.dismiss()
+        val all = withContext(Dispatchers.Default) { ColorManager.presetColorSchemes }
+        val allIds = all.keys
+        val allNames = all.values.mapNotNull { it["name"] }
+        val currentId = ColorManager.selectedColor
+        val currentIndex = all.keys.indexOfFirst { it == currentId }
+        return AlertDialog.Builder(context).apply {
+            setTitle(R.string.looks__selected_color_title)
+            if (all.isEmpty()) {
+                setMessage(R.string.no_color_to_select)
+            } else {
+                setSingleChoiceItems(
+                    allNames.toTypedArray(),
+                    currentIndex,
+                ) { dialog, which ->
+                    scope.launch {
+                        if (which != currentIndex) {
+                            ColorManager.setColorScheme(allIds.elementAt(which))
                         }
+                        dialog.dismiss()
                     }
                 }
-                setNegativeButton(android.R.string.cancel, null)
-            }.create()
+            }
+            setNegativeButton(android.R.string.cancel, null)
+        }.create()
     }
 }

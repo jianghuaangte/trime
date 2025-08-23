@@ -14,7 +14,6 @@ import androidx.appcompat.app.AlertDialog
 import androidx.preference.Preference
 import com.osfans.trime.R
 import com.osfans.trime.databinding.FolderPickerDialogBinding
-import com.osfans.trime.util.getFileFromUri
 import com.osfans.trime.util.getUriForFile
 import java.io.File
 
@@ -26,11 +25,10 @@ class FolderPickerPreference
         defStyleAttr: Int = androidx.preference.R.attr.preferenceStyle,
     ) : Preference(context, attrs, defStyleAttr) {
         private var value = ""
-        private lateinit var dialogView: FolderPickerDialogBinding
+        lateinit var documentTreeLauncher: ActivityResultLauncher<Uri?>
+        lateinit var dialogView: FolderPickerDialogBinding
 
         var default = ""
-
-        var documentTreeLauncher: ActivityResultLauncher<Uri?>? = null
 
         init {
             context.theme.obtainStyledAttributes(attrs, R.styleable.FolderPickerPreferenceAttrs, 0, 0).run {
@@ -44,10 +42,11 @@ class FolderPickerPreference
             }
         }
 
-        override fun persistString(value: String): Boolean =
-            super.persistString(value).also {
+        override fun persistString(value: String): Boolean {
+            return super.persistString(value).also {
                 if (it) this.value = value
             }
+        }
 
         override fun setDefaultValue(defaultValue: Any?) {
             super.setDefaultValue(defaultValue)
@@ -57,7 +56,9 @@ class FolderPickerPreference
         override fun onGetDefaultValue(
             a: TypedArray,
             index: Int,
-        ): Any = a.getString(index) ?: default
+        ): Any {
+            return a.getString(index) ?: default
+        }
 
         override fun onSetInitialValue(defaultValue: Any?) {
             value = getPersistedString(defaultValue as? String ?: default)
@@ -70,18 +71,19 @@ class FolderPickerPreference
             dialogView = FolderPickerDialogBinding.inflate(LayoutInflater.from(context))
             dialogView.editText.setText(initValue)
             dialogView.button.setOnClickListener {
-                documentTreeLauncher?.launch(context.getUriForFile(File(initValue)))
+                documentTreeLauncher.launch(context.getUriForFile(File(initValue)))
             }
-            AlertDialog
-                .Builder(context)
+            AlertDialog.Builder(context)
                 .setTitle(this@FolderPickerPreference.title)
                 .setView(dialogView.root)
                 .setPositiveButton(android.R.string.ok) { _, _ ->
                     val value = dialogView.editText.text.toString()
                     setValue(value)
-                }.setNeutralButton(R.string.pref__default) { _, _ ->
+                }
+                .setNeutralButton(R.string.pref__default) { _, _ ->
                     setValue(default)
-                }.setNegativeButton(android.R.string.cancel, null)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
 
@@ -90,9 +92,5 @@ class FolderPickerPreference
                 persistString(value)
                 notifyChanged()
             }
-        }
-
-        fun onResult(result: Uri) {
-            dialogView.editText.setText(context.getFileFromUri(result)?.absolutePath)
         }
     }

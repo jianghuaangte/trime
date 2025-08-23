@@ -10,6 +10,7 @@ import android.os.Environment
 import com.osfans.trime.data.prefs.AppPrefs
 import com.osfans.trime.util.FileUtils
 import com.osfans.trime.util.ResourceUtils
+import com.osfans.trime.util.WeakHashSet
 import com.osfans.trime.util.appContext
 import kotlinx.serialization.json.Json
 import timber.log.Timber
@@ -26,7 +27,9 @@ object DataManager {
 
     private val json by lazy { Json }
 
-    private fun deserializeDataChecksums(raw: String): DataChecksums = json.decodeFromString<DataChecksums>(raw)
+    private fun deserializeDataChecksums(raw: String): DataChecksums {
+        return json.decodeFromString<DataChecksums>(raw)
+    }
 
     // If Android version supports direct boot, we put the hierarchy in device encrypted storage
     // instead of credential encrypted storage so that data can be accessed before user unlock
@@ -38,23 +41,42 @@ object DataManager {
             File(appContext.applicationInfo.dataDir)
         }
 
-    private fun AssetManager.dataChecksums(): DataChecksums =
-        open(DATA_CHECKSUMS_NAME)
+    private fun AssetManager.dataChecksums(): DataChecksums {
+        return open(DATA_CHECKSUMS_NAME)
             .bufferedReader()
             .use { it.readText() }
             .let { deserializeDataChecksums(it) }
+    }
 
-    private val prefs by lazy { AppPrefs.defaultInstance() }
+    private val prefs get() = AppPrefs.defaultInstance()
 
-    val defaultDataDir = File(Environment.getExternalStorageDirectory(), "rime")
+    val defaultDataDirectory = File(Environment.getExternalStorageDirectory(), "rime")
 
-    val sharedDataDir = File(appContext.getExternalFilesDir(null), "shared").also { it.mkdirs() }
+    private val onDataDirChangeListeners = WeakHashSet<OnDataDirChangeListener>()
 
+    fun interface OnDataDirChangeListener {
+        fun onDataDirChange()
+    }
+
+    fun addOnChangedListener(listener: OnDataDirChangeListener) {
+        onDataDirChangeListeners.add(listener)
+    }
+
+    fun removeOnChangedListener(listener: OnDataDirChangeListener) {
+        onDataDirChangeListeners.remove(listener)
+    }
+
+    fun dirFireChange() {
+        onDataDirChangeListeners.forEach { it.onDataDirChange() }
+    }
+
+    @JvmStatic
+    val sharedDataDir
+        get() = File(prefs.profile.sharedDataDir)
+
+    @JvmStatic
     val userDataDir
-        get() = File(prefs.profile.userDataDir.getValue()).also { it.mkdirs() }
-
-    val prebuiltDataDir = File(sharedDataDir, "build")
-    val stagingDir get() = File(userDataDir, "build")
+        get() = File(prefs.profile.userDataDir)
 
     /**
      * Return the absolute path of the compiled config file
@@ -65,6 +87,9 @@ object DataManager {
      */
     @JvmStatic
     fun resolveDeployedResourcePath(resourceId: String): String {
+        val stagingDir = File(userDataDir, "build")
+        val prebuiltDataDir = File(sharedDataDir, "build")
+
         val defaultPath = File(stagingDir, "$resourceId.yaml")
         if (!defaultPath.exists()) {
             val fallbackPath = File(prebuiltDataDir, "$resourceId.yaml")
@@ -88,33 +113,22 @@ object DataManager {
                 when (it) {
                     is DataDiff.CreateFile,
                     is DataDiff.UpdateFile,
-                    -> {
-                        val relativePath = it.path.removePrefix("shared/")
-                        val destPath = File(defaultDataDir, relativePath).absolutePath
-                        ResourceUtils.copyFile(it.path, destPath)
-                    }
+                    -> ResourceUtils.copyFile(it.path, sharedDataDir, "rime/")
                     is DataDiff.DeleteDir,
                     is DataDiff.DeleteFile,
-                    -> FileUtils.delete(sharedDataDir.resolve(it.path.substringAfterLast('/'))).getOrThrow()
+                    -> FileUtils.delete(sharedDataDir.resolve(it.path.removePrefix("rime/"))).getOrThrow()
                 }
             }
 
-            ResourceUtils.copyFile(DATA_CHECKSUMS_NAME, dataDir.resolve(DATA_CHECKSUMS_NAME).absolutePath)
+            ResourceUtils.copyFile(DATA_CHECKSUMS_NAME, dataDir)
 
-            // 创建 default.custom.yaml 并用空方案列表覆盖 default.yaml 默认的方案列表
-            // TODO: 内置明月拼音等方案，提供最小开箱即用环境
-            runCatching {
-                val defaultCustom = File(userDataDir, DEFAULT_CUSTOM_FILE_NAME)
-                if (defaultCustom.createNewFile()) {
-                    defaultCustom.writeText(
-                        """
-                        patch:
-                          schema_list:
-                            - {schema: 092wb}
-                        """.trimIndent(),
-                    )
+            // FIXME：缺失 default.custom.yaml 会导致方案列表为空
+            File(sharedDataDir, DEFAULT_CUSTOM_FILE_NAME).let {
+                if (!it.exists()) {
+                    Timber.d("Creating empty default.custom.yaml")
+                    it.bufferedWriter().use { w -> w.write("") }
                 }
-            }.getOrElse { Timber.e(it, "Failed to create default.custom.yaml") }
+            }
 
             Timber.d("Synced!")
         }

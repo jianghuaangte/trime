@@ -4,13 +4,14 @@
 
 package com.osfans.trime.ime.keyboard
 
-import com.osfans.trime.data.theme.model.TextKeyboard
+import com.osfans.trime.util.CollectionUtils.obtainFloat
 import com.osfans.trime.util.appContext
 import com.osfans.trime.util.sp
 import kotlin.math.abs
 import kotlin.math.ceil
 
 class KeyboardSizeCalculator(
+    val name: String,
     isSplit: Boolean,
     splitPercent: Int,
     private val maxColumns: Int,
@@ -24,7 +25,7 @@ class KeyboardSizeCalculator(
 ) {
     private val splitSpaceRatio: Float = if (isSplit) (splitPercent / 100f) else 0f
 
-    fun calc(keys: List<TextKeyboard.TextKey>): KeyboardSize {
+    fun calc(lm: List<Map<String, Any>>): KeyboardSize {
         var x = mDefaultHorizontalGap / 2
         var y = 0
         var column = 0
@@ -39,12 +40,13 @@ class KeyboardSizeCalculator(
         var maxColumn = 0
         val rowTotalWeight = HashMap<Int, Float>()
 
-        for (key in keys) {
+        for (mk in lm) {
+            val weight = obtainFloat(mk, "width", 0f)
             val keyWidthWeight =
-                if (key.width == 0f && key.click.isNotEmpty()) {
+                if (weight == 0f && mk.contains("click")) {
                     keyboardKeyWidth
                 } else {
-                    key.width
+                    weight
                 }
             val widthPx =
                 (keyWidthWeight * mAllowedWidth / MAX_TOTAL_WEIGHT).toInt() - mDefaultHorizontalGap
@@ -62,10 +64,11 @@ class KeyboardSizeCalculator(
             }
 
             if (column == 0) {
-                rowHeight = if (key.height > 0) appContext.sp(key.height).toInt() else keyHeight
+                val heightK = appContext.sp(obtainFloat(mk, "height", 0f)).toInt()
+                rowHeight = if (heightK > 0) heightK else keyHeight
             }
             totalKeyWidth += keyWidthWeight
-            if (key.click.isEmpty()) { // 無按鍵事件
+            if (!mk.containsKey("click")) { // 無按鍵事件
                 x += widthPx + mDefaultHorizontalGap
                 continue // 縮進
             }
@@ -95,7 +98,9 @@ class KeyboardSizeCalculator(
         )
     }
 
-    private fun calculateOneWeightWidthPx(): Float = (mAllowedWidth / (MAX_TOTAL_WEIGHT * (1 + splitSpaceRatio)))
+    private fun calculateOneWeightWidthPx(): Float {
+        return (mAllowedWidth / (MAX_TOTAL_WEIGHT * (1 + splitSpaceRatio)))
+    }
 
     private fun calculateScaledVerticalGap(
         rawSumHeight: Int,

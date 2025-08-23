@@ -11,69 +11,63 @@ import android.media.SoundPool
 import android.os.Build
 import android.os.VibrationEffect
 import android.speech.tts.TextToSpeech
-import android.util.SparseIntArray
 import android.view.HapticFeedbackConstants
 import android.view.KeyEvent
 import android.view.View
-import androidx.core.util.containsValue
 import com.osfans.trime.data.prefs.AppPrefs
-import com.osfans.trime.data.soundeffect.SoundEffectManager
+import com.osfans.trime.data.sound.SoundEffectManager
 import splitties.systemservices.audioManager
 import splitties.systemservices.vibrator
 import timber.log.Timber
+import java.util.Locale
 
 /**
  * Manage the key press effects, such as vibration, sound, speaking and so on.
  */
 object InputFeedbackManager {
-    private val keyboardPrefs = AppPrefs.defaultInstance().keyboard
+    private val keyboardPrefs get() = AppPrefs.defaultInstance().keyboard
 
     private var tts: TextToSpeech? = null
     private var soundPool: SoundPool? = null
 
-    private var effectPlayProgress = 0
-    private val cachedSoundIds = SparseIntArray(30)
+    private var playProgress = -1
+    private var lastPressedKeycode = 0
+    private val soundIds: MutableList<Int> = mutableListOf()
 
-    fun init(context: Context) {
-        try {
-            tts = TextToSpeech(context, null)
-            soundPool =
-                SoundPool
-                    .Builder()
-                    .setMaxStreams(3)
-                    .setAudioAttributes(
-                        AudioAttributes
-                            .Builder()
-                            .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                            .build(),
-                    ).build()
-        } catch (e: Exception) {
-            Timber.e(e, "Error on initializing InputFeedbackManager")
+    fun init() {
+        runCatching {
+            SoundEffectManager.init()
+        }.getOrElse {
+            Timber.w(it, "Failed to initialize InputFeedbackManager")
         }
     }
 
-    private fun cacheSoundId() {
-        cachedSoundIds.clear()
-        SoundEffectManager.activeAudioPaths.forEachIndexed { i, path ->
-            val id = soundPool?.load(path, 1) ?: 0
-            if (id != 0 && !cachedSoundIds.containsValue(id)) {
-                cachedSoundIds.put(i, id)
-            }
+    fun loadSoundEffects(context: Context) {
+        tts = TextToSpeech(context, null)
+        soundPool =
+            SoundPool.Builder()
+                .setMaxStreams(1)
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setLegacyStreamType(AudioManager.STREAM_SYSTEM)
+                        .build(),
+                ).build()
+        SoundEffectManager.getActiveSoundFilePaths().onSuccess { path ->
+            soundIds.clear()
+            soundIds.addAll(path.map { soundPool?.load(it, 1) ?: 0 })
         }
     }
 
-    fun startInput() {
-        cacheSoundId()
+    private fun releaseSoundPool() {
+        SoundEffectManager.getActiveSoundEffect().onSuccess {
+            soundPool?.release()
+            soundPool = null
+        }
     }
 
     private val hasAmplitudeControl =
         (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) &&
             vibrator.hasAmplitudeControl()
-
-    private val vibrateOnKeyPress by keyboardPrefs.vibrateOnKeyPress
-    private val vibrationDuration by keyboardPrefs.vibrationDuration
-    private val vibrationAmplitude by keyboardPrefs.vibrationAmplitude
 
     /**
      * Makes a key press vibration if the user has this feature enabled in the preferences.
@@ -82,131 +76,128 @@ object InputFeedbackManager {
         view: View,
         longPress: Boolean = false,
     ) {
-        if (!vibrateOnKeyPress) return
-        val duration: Long = vibrationDuration.toLong()
-        val hfc =
-            if (longPress) {
-                HapticFeedbackConstants.LONG_PRESS
-            } else {
-                HapticFeedbackConstants.KEYBOARD_TAP
-            }
+        if (keyboardPrefs.vibrationEnabled) {
+            val duration: Long = keyboardPrefs.vibrationDuration.toLong()
+            val amplitude = keyboardPrefs.vibrationAmplitude
+            val hfc =
+                if (longPress) {
+                    HapticFeedbackConstants.LONG_PRESS
+                } else {
+                    HapticFeedbackConstants.KEYBOARD_TAP
+                }
 
-        if (duration != 0L) { // use vibrator
-            if (hasAmplitudeControl && vibrationAmplitude != 0) {
-                vibrator.vibrate(VibrationEffect.createOneShot(duration, vibrationAmplitude))
-            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val ve = VibrationEffect.createOneShot(duration, VibrationEffect.DEFAULT_AMPLITUDE)
-                vibrator.vibrate(ve)
+            if (duration > 0L) { // use vibrator
+                if (hasAmplitudeControl && amplitude != 0) {
+                    vibrator.vibrate(VibrationEffect.createOneShot(duration, amplitude))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator.vibrate(duration)
+                }
             } else {
                 @Suppress("DEPRECATION")
-                vibrator.vibrate(duration)
+                val flags =
+                    HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING or HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
+                view.performHapticFeedback(hfc, flags)
             }
-        } else {
-            @Suppress("DEPRECATION")
-            val flags =
-                HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING or HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING
-            view.performHapticFeedback(hfc, flags)
         }
     }
 
-    private fun querySoundIndex(keyCode: Int): Int {
-        val effect = SoundEffectManager.activeSoundEffect ?: return 0
-        val sounds = effect.sound
-        if (sounds.isEmpty()) return 0
-        val melody = effect.melody
-        return if (melody.isNotEmpty()) {
-            val index = sounds.indexOf(melody[effectPlayProgress])
-            effectPlayProgress = (effectPlayProgress + 1) % melody.size
-            index
-        } else {
-            var index = 0
-            for (key in effect.keyset) {
-                val i = key.querySoundIndex(keyCode)
-                if (i >= 0) {
-                    index = i
-                    break
-                }
-            }
-            Timber.d("without melody: index: $index, sounds.size=${sounds.size}")
-            index
+    /** Text to Speech engine's language getter and setter */
+    var ttsLanguage: Locale?
+        get() = tts?.voice?.locale
+        set(v) {
+            tts?.language = v
         }
+
+    fun resetPlayProgress() {
+        if (playProgress > 0) playProgress = 0
     }
 
-    private val soundOnKeyPress by keyboardPrefs.soundOnKeyPress
-    private val soundEffectEnabled by keyboardPrefs.soundEffectEnabled
-    private val soundVolume by keyboardPrefs.soundVolume
+    private fun playCustomSoundEffect(
+        keycode: Int,
+        volume: Float,
+    ) {
+        SoundEffectManager.getActiveSoundEffect().onSuccess { effect ->
+            if (effect.sound.isEmpty()) return
+            val sounds = effect.sound
+            val melody = effect.melody
+            var currentSoundId = 0
+            if (playProgress > -1) {
+                if (melody.isNullOrEmpty()) return
+                currentSoundId = sounds.indexOf(melody[playProgress])
+                playProgress = (playProgress + 1) % melody.size
+            } else if (keycode != lastPressedKeycode) {
+                lastPressedKeycode = keycode
+                currentSoundId = effect.keyset.find { it.soundId(keycode) >= 0 }?.soundId(keycode) ?: 0
+                Timber.d("play without melody: currentSoundId=$currentSoundId, soundIds.size=${soundIds.size}")
+            }
+            soundPool?.play(soundIds[currentSoundId], volume, volume, 1, 0, 1f)
+        }
+    }
 
     /**
      * Makes a key press sound if the user has this feature enabled in the preferences.
      */
     fun keyPressSound(keyCode: Int = 0) {
-        if (!soundOnKeyPress) return
-        if (soundEffectEnabled) {
+        if (keyboardPrefs.soundEnabled) {
+            val soundVolume = keyboardPrefs.soundVolume / 100f
             if (soundVolume <= 0) return
-            val volume = soundVolume / 100f
-            val index = querySoundIndex(keyCode)
-            val soundId = cachedSoundIds[index]
-            soundPool?.play(soundId, volume, volume, 0, 0, 1f)
-        } else {
-            val effect =
-                when (keyCode) {
-                    KeyEvent.KEYCODE_SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
-                    KeyEvent.KEYCODE_DEL -> AudioManager.FX_KEYPRESS_DELETE
-                    KeyEvent.KEYCODE_ENTER -> AudioManager.FX_KEYPRESS_RETURN
-                    else -> AudioManager.FX_KEYPRESS_STANDARD
-                }
-            val volume =
-                if (soundVolume == 0) {
-                    -1f
-                } else {
-                    soundVolume / 100f
-                }
-            audioManager.playSoundEffect(
-                effect,
-                volume,
-            )
+            if (keyboardPrefs.customSoundEnabled) {
+                playCustomSoundEffect(keyCode, soundVolume)
+            } else {
+                val effect =
+                    when (keyCode) {
+                        KeyEvent.KEYCODE_SPACE -> AudioManager.FX_KEYPRESS_SPACEBAR
+                        KeyEvent.KEYCODE_DEL -> AudioManager.FX_KEYPRESS_DELETE
+                        KeyEvent.KEYCODE_ENTER -> AudioManager.FX_KEYPRESS_RETURN
+                        else -> AudioManager.FX_KEYPRESS_STANDARD
+                    }
+                audioManager.playSoundEffect(
+                    effect,
+                    soundVolume,
+                )
+            }
         }
     }
 
-    private val speakOnKeyPress by keyboardPrefs.speakOnKeyPress
-    private val speakOnCommit by keyboardPrefs.speakOnCommit
-
-    fun keyPressSpeak(keyCode: Int) {
-        if (!speakOnKeyPress) return
-        contentSpeakInternal(keyCode)
+    /**
+     * Makes a key press speaking if the user has this feature enabled in the preferences.
+     */
+    fun keyPressSpeak(content: Any? = null) {
+        if (keyboardPrefs.isSpeakKey) contentSpeakInternal(content)
     }
 
-    fun textCommitSpeak(text: String) {
-        if (!speakOnCommit) return
-        contentSpeakInternal(text)
+    /**
+     * Makes a text commit speaking if the user has this feature enabled in the preferences.
+     */
+    fun textCommitSpeak(text: CharSequence? = null) {
+        if (keyboardPrefs.isSpeakCommit) contentSpeakInternal(text)
     }
 
     private inline fun <reified T> contentSpeakInternal(content: T) {
         val text =
             when {
                 0 is T -> {
-                    KeyEvent
-                        .keyCodeToString(content as Int)
+                    KeyEvent.keyCodeToString(content as Int)
                         .replace("KEYCODE_", "")
                         .replace("_", " ")
-                        .lowercase()
+                        .lowercase(Locale.getDefault())
                 }
                 "" is T -> content as String
-                else -> return
-            }
+                else -> null
+            } ?: return
 
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "TrimeTTS")
     }
 
     fun finishInput() {
-        effectPlayProgress = 0
+        releaseSoundPool()
     }
 
     fun destroy() {
         tts?.stop()
         tts?.shutdown()
         tts = null
-        soundPool?.release()
-        soundPool = null
+        releaseSoundPool()
     }
 }

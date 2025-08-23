@@ -11,8 +11,8 @@ import androidx.preference.Preference
 import com.osfans.trime.R
 import com.osfans.trime.ui.components.PaddingPreferenceFragment
 import com.osfans.trime.ui.main.MainViewModel
-import com.osfans.trime.util.AppUtils
 import com.osfans.trime.util.Logcat
+import com.osfans.trime.util.ShortcutUtils
 
 class ToolkitFragment : PaddingPreferenceFragment() {
     private val viewModel: MainViewModel by activityViewModels()
@@ -28,7 +28,7 @@ class ToolkitFragment : PaddingPreferenceFragment() {
                 setTitle(R.string.real_time_logs)
                 isIconSpaceReserved = false
                 setOnPreferenceClickListener {
-                    AppUtils.launchLogActivity(context)
+                    ShortcutUtils.launchLogActivity(context)
                     true
                 }
             },
@@ -38,8 +38,7 @@ class ToolkitFragment : PaddingPreferenceFragment() {
                 setTitle(R.string.real_time_logs_clear)
                 isIconSpaceReserved = false
                 setOnPreferenceClickListener {
-                    AlertDialog
-                        .Builder(context)
+                    AlertDialog.Builder(context)
                         .setMessage(R.string.real_time_logs_confirm)
                         .setPositiveButton(R.string.ok) { _, _ ->
                             Logcat.default.clearLog()
@@ -54,6 +53,7 @@ class ToolkitFragment : PaddingPreferenceFragment() {
 
     override fun onResume() {
         super.onResume()
+        viewModel.setToolbarTitle(getString(R.string.pref_toolkit))
         viewModel.disableTopOptionsMenu()
     }
 }

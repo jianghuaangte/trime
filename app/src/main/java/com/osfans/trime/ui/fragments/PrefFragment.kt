@@ -6,24 +6,30 @@ package com.osfans.trime.ui.fragments
 
 import android.os.Bundle
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.preference.Preference
 import androidx.preference.get
 import com.osfans.trime.R
+import com.osfans.trime.daemon.launchOnReady
+import com.osfans.trime.ime.dialog.AvailableSchemaPickerDialog
+import com.osfans.trime.ime.dialog.EnabledSchemaPickerDialog
 import com.osfans.trime.ui.components.PaddingPreferenceFragment
 import com.osfans.trime.ui.main.MainViewModel
+import kotlinx.coroutines.launch
 
 class PrefFragment : PaddingPreferenceFragment() {
     private val viewModel: MainViewModel by activityViewModels()
 
-    override fun onStart() {
-        super.onStart()
+    override fun onResume() {
+        super.onResume()
+        viewModel.setToolbarTitle(getString(R.string.trime_app_name))
         viewModel.enableTopOptionsMenu()
     }
 
-    override fun onStop() {
+    override fun onPause() {
         viewModel.disableTopOptionsMenu()
-        super.onStop()
+        super.onPause()
     }
 
     override fun onCreatePreferences(
@@ -33,27 +39,29 @@ class PrefFragment : PaddingPreferenceFragment() {
         setPreferencesFromResource(R.xml.prefs, rootKey)
         with(preferenceScreen) {
             get<Preference>("pref_schemata")?.setOnPreferenceClickListener {
-                findNavController().navigate(R.id.action_prefFragment_to_schemaListFragment)
+                viewModel.rime.launchOnReady { api ->
+                    lifecycleScope.launch {
+                        EnabledSchemaPickerDialog.build(api, lifecycleScope, context) {
+                            setPositiveButton(R.string.enable_schemata) { _, _ ->
+                                lifecycleScope.launch {
+                                    AvailableSchemaPickerDialog.build(api, lifecycleScope, context).show()
+                                }
+                            }
+                        }.show()
+                    }
+                }
                 true
             }
             get<Preference>("pref_user_data")?.setOnPreferenceClickListener {
                 findNavController().navigate(R.id.action_prefFragment_to_profileFragment)
                 true
             }
-            get<Preference>("pref_general")?.setOnPreferenceClickListener {
-                findNavController().navigate(R.id.action_prefFragment_to_generalSettingsFragment)
-                true
-            }
             get<Preference>("pref_keyboard")?.setOnPreferenceClickListener {
                 findNavController().navigate(R.id.action_prefFragment_to_keyboardFragment)
                 true
             }
-            get<Preference>("pref_candidates")?.setOnPreferenceClickListener {
-                findNavController().navigate(R.id.action_prefFragment_to_candidatesSettingsFragment)
-                true
-            }
             get<Preference>("pref_theme_and_color")?.setOnPreferenceClickListener {
-                findNavController().navigate(R.id.action_prefFragment_to_themeSettingsFragment)
+                findNavController().navigate(R.id.action_prefFragment_to_themeColorFragment)
                 true
             }
             get<Preference>("pref_clipboard")?.setOnPreferenceClickListener {

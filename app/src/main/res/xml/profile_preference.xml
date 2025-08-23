@@ -11,6 +11,12 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
     <PreferenceCategory android:title="@string/storage"
         app:iconSpaceReserved="false" >
+        <com.osfans.trime.ui.components.FolderPickerPreference
+            android:key="profile_shared_data_dir"
+            app:iconSpaceReserved="false"
+            android:title="@string/profile_shared_data_dir"
+            app:persistent="true"
+            app:useSimpleSummaryProvider="true" />
 
         <com.osfans.trime.ui.components.FolderPickerPreference
             android:key="profile_user_data_dir"
@@ -20,27 +26,23 @@ SPDX-License-Identifier: GPL-3.0-or-later
             app:useSimpleSummaryProvider="true" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="@string/synchronization"
-        app:iconSpaceReserved="false">
-        <Preference android:key="sync_user_data"
-            app:iconSpaceReserved="false"
-            android:title="@string/sync_user_data_immediately" />
-
-        <SwitchPreferenceCompat
-            android:key="periodic_background_sync"
-            app:iconSpaceReserved="false"
-            android:title="@string/periodic_background_sync" />
-
-        <com.osfans.trime.ui.main.settings.EditTextIntPreference
-            android:key="periodic_background_sync_interval"
-            app:iconSpaceReserved="false"
-            android:title="@string/periodic_background_sync_interval"
-            android:defaultValue="30"
-            app:dependency="periodic_background_sync" />
-    </PreferenceCategory>
-
     <PreferenceCategory android:title="@string/maintenance"
         app:iconSpaceReserved="false" >
+        <Preference android:key="profile_sync_user_data"
+            app:iconSpaceReserved="false"
+            android:title="@string/profile_sync_user_data"
+            android:summary="@string/profile_sync_user_data_summary"/>
+
+        <SwitchPreferenceCompat android:key="profile_sync_in_background"
+            app:iconSpaceReserved="false"
+            android:title="@string/profile_sync_in_background"
+            android:persistent="true" />
+
+        <SwitchPreferenceCompat android:key="profile_timing_sync"
+            app:iconSpaceReserved="false"
+            android:title="@string/profile_timing_sync"
+            android:persistent="true" />
+
         <Preference android:key="profile_reset"
             app:iconSpaceReserved="false"
             android:title="@string/profile_reset"

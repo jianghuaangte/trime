@@ -36,9 +36,8 @@ private typealias KeyPair = Pair<Pair<RimeKeyName, RimeKeyVal>, AndroidKeyCode>
  *  https://github.com/fcitx5-android/fcitx5-android/blob/14fe8c589ecb1546ed76445df0de658f81c4a1ed/codegen/src/main/java/org/fcitx/fcitx5/android/codegen/GenKeyMapping.kt
  */
 @Suppress("ktlint:standard:value-argument-comment")
-internal class GenKeyMappingProcessor(
-    private val environment: SymbolProcessorEnvironment,
-) : SymbolProcessor {
+internal class GenKeyMappingProcessor(private val environment: SymbolProcessorEnvironment) :
+    SymbolProcessor {
     @Suppress("ktlint:standard:no-consecutive-comments")
     private val pairs: List<KeyPair> =
         listOf(
@@ -218,7 +217,8 @@ internal class GenKeyMappingProcessor(
                 |     else -> KeyEvent.KEYCODE_UNKNOWN
                 | }
                     """.trimMargin(),
-                ).build()
+                )
+                .build()
 
         val keyCodeToVal =
             FunSpec
@@ -244,7 +244,8 @@ internal class GenKeyMappingProcessor(
                     |     else -> RimeKey_VoidSymbol
                     | }
                     """.trimMargin(),
-                ).build()
+                )
+                .build()
 
         val keyValFromName =
             FunSpec
@@ -259,7 +260,8 @@ internal class GenKeyMappingProcessor(
                 |     else -> RimeKey_VoidSymbol
                 | }
                     """.trimMargin(),
-                ).build()
+                )
+                .build()
 
         val keyValToName =
             FunSpec
@@ -274,7 +276,8 @@ internal class GenKeyMappingProcessor(
                 |     else -> "VoidSymbol"
                 | }
                     """.trimMargin(),
-                ).build()
+                )
+                .build()
 
         val obj =
             TypeSpec
@@ -291,11 +294,13 @@ internal class GenKeyMappingProcessor(
                                 keyName(f),
                                 Int::class,
                                 KModifier.CONST,
-                            ).initializer(String.format("0x%04x", `val`))
+                            )
+                            .initializer(String.format("0x%04x", `val`))
                             .build()
                             .let { addProperty(it) }
                     }
-                }.build()
+                }
+                .build()
 
         val file =
             FileSpec

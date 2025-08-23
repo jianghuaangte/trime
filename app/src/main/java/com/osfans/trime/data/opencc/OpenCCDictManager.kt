@@ -4,6 +4,7 @@
 
 package com.osfans.trime.data.opencc
 
+import androidx.annotation.Keep
 import com.osfans.trime.data.base.DataManager
 import com.osfans.trime.data.opencc.dict.Dictionary
 import com.osfans.trime.data.opencc.dict.OpenCCDictionary
@@ -15,12 +16,24 @@ import java.io.InputStream
 import kotlin.system.measureTimeMillis
 
 object OpenCCDictManager {
+    /**
+     * Update sharedDir and userDir.
+     */
+    @Keep
+    private val onDataDirChange =
+        DataManager.OnDataDirChangeListener {
+            sharedDir = File(DataManager.sharedDataDir, "opencc").also { it.mkdirs() }
+            userDir = File(DataManager.userDataDir, "opencc").also { it.mkdirs() }
+        }
+
     init {
         System.loadLibrary("rime_jni")
+        // register listener
+        DataManager.addOnChangedListener(onDataDirChange)
     }
 
-    private val sharedDir = File(DataManager.sharedDataDir, "opencc").also { it.mkdirs() }
-    private val userDir get() = File(DataManager.userDataDir, "opencc").also { it.mkdirs() }
+    var sharedDir = File(DataManager.sharedDataDir, "opencc").also { it.mkdirs() }
+    var userDir = File(DataManager.userDataDir, "opencc").also { it.mkdirs() }
 
     fun sharedDictionaries(): List<Dictionary> =
         sharedDir
@@ -32,7 +45,12 @@ object OpenCCDictManager {
             .listFiles()
             ?.mapNotNull { Dictionary.new(it) } ?: listOf()
 
-    fun getAllDictionaries(): List<Dictionary> = sharedDictionaries() + userDictionaries()
+    fun getAllDictionaries(): List<Dictionary> =
+        if (sharedDir.path == userDir.path) {
+            userDictionaries()
+        } else {
+            (sharedDictionaries() + userDictionaries())
+        }
 
     fun importFromFile(file: File): OpenCCDictionary {
         val raw =
@@ -62,12 +80,11 @@ object OpenCCDictManager {
                 measureTimeMillis {
                     result = runCatching { d.toOpenCCDictionary() }
                 }.also {
-                    result
-                        .onSuccess { r ->
-                            Timber.d("Took $it to convert to $r")
-                        }.onFailure {
-                            Timber.e(it, "Failed to convert $d")
-                        }
+                    result.onSuccess { r ->
+                        Timber.d("Took $it to convert to $r")
+                    }.onFailure {
+                        Timber.e(it, "Failed to convert $d")
+                    }
                 }
             }
         }
@@ -114,6 +131,9 @@ object OpenCCDictManager {
         input: String,
         configFileName: String,
     ): String
+
+    @JvmStatic
+    external fun getOpenCCVersion(): String
 
     const val MODE_BIN_TO_TXT = true // OCD(2) to TXT
     const val MODE_TXT_TO_BIN = false // TXT to OCD2

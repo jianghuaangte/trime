@@ -4,80 +4,97 @@
 
 package com.osfans.trime.data.theme
 
-import android.os.Parcelable
-import com.charleskorn.kaml.YamlMap
-import com.charleskorn.kaml.yamlMap
-import com.charleskorn.kaml.yamlScalar
 import com.osfans.trime.core.Rime
-import com.osfans.trime.data.base.DataManager
+import com.osfans.trime.data.prefs.AppPrefs
 import com.osfans.trime.data.theme.mapper.GeneralStyleMapper
-import com.osfans.trime.data.theme.mapper.LiquidKeyboardMapper
-import com.osfans.trime.data.theme.mapper.TextKeyboardMapper
-import com.osfans.trime.data.theme.model.ColorScheme
 import com.osfans.trime.data.theme.model.GeneralStyle
-import com.osfans.trime.data.theme.model.LiquidKeyboard
-import com.osfans.trime.data.theme.model.PresetKey
-import com.osfans.trime.data.theme.model.TextKeyboard
-import com.osfans.trime.util.getString
-import kotlinx.parcelize.Parcelize
+import com.osfans.trime.util.config.Config
+import com.osfans.trime.util.config.ConfigList
+import com.osfans.trime.util.config.ConfigMap
 import timber.log.Timber
-import java.io.File
+import kotlin.system.measureTimeMillis
 
 /** 主题和样式配置  */
-@Parcelize
-data class Theme(
-    val configId: String,
-    val name: String,
-    val generalStyle: GeneralStyle,
-    val liquidKeyboard: LiquidKeyboard,
-    val presetKeys: Map<String, PresetKey>,
-    val presetKeyboards: Map<String, TextKeyboard>,
-    val colorSchemes: List<ColorScheme>,
-    val fallbackColors: Map<String, String>,
-) : Parcelable {
-    companion object {
-        private const val CONFIG_VERSION_KEY = "config_version"
+class Theme(name: String) {
+    val generalStyle: GeneralStyle
+    val liquid: Liquid
+    val keyboards: Keyboards
 
-        fun decodeByConfigId(configId: String): Theme {
-            if (!Rime.deployRimeConfigFile(configId, CONFIG_VERSION_KEY)) {
-                Timber.w("Failed to deploy theme config file '$configId.yaml'")
+    var presetKeys: ConfigMap? = null
+        private set
+    var fallbackColors: ConfigMap? = null
+        private set
+    var presetColorSchemes: ConfigMap? = null
+        private set
+    var presetKeyboards: ConfigMap? = null
+        private set
+
+    companion object {
+        private val prefs = AppPrefs.defaultInstance().theme
+        private const val VERSION_KEY = "config_version"
+        private const val DEFAULT_THEME_NAME = "trime"
+
+        private fun deploy(active: String): Config? {
+            val ext = if (active == DEFAULT_THEME_NAME) ".yaml" else ".trime.yaml"
+            val nameWithExtension = "$active$ext"
+            val isDeployed: Boolean
+            measureTimeMillis {
+                isDeployed = Rime.deployRimeConfigFile(nameWithExtension, VERSION_KEY)
+            }.also {
+                if (isDeployed) {
+                    Timber.i("Deployed theme file '$nameWithExtension' in $it ms")
+                } else {
+                    Timber.w("Failed to deploy theme file '$nameWithExtension'")
+                }
             }
-            val yaml = ThemeFilesManager.yaml
-            val file = File(DataManager.resolveDeployedResourcePath(configId))
-            val root = yaml.parseToYamlNode(file.readText()).yamlMap
-            return Theme(
-                configId = configId,
-                name = root.getString("name"),
-                generalStyle = GeneralStyleMapper(root.get<YamlMap>("style")!!).map(),
-                liquidKeyboard =
-                    when (val node = root.get<YamlMap>("liquid_keyboard")) {
-                        null -> LiquidKeyboard()
-                        else -> LiquidKeyboardMapper(node).map()
-                    },
-                presetKeys =
-                    when (val map = root.get<YamlMap>("preset_keys")) {
-                        null -> emptyMap()
-                        else -> yaml.decodeFromYamlNode(map)
-                    },
-                presetKeyboards =
-                    root.get<YamlMap>("preset_keyboards")?.entries?.entries?.associate {
-                        it.key.content to TextKeyboardMapper(it.value.yamlMap).map()
-                    } ?: emptyMap(),
-                colorSchemes =
-                    root.get<YamlMap>("preset_color_schemes")?.entries?.entries?.map {
-                        ColorScheme(
-                            it.key.content,
-                            it.value.yamlMap.entries.entries.associate { (k, v) ->
-                                k.content to v.yamlScalar.content
-                            },
-                        )
-                    } ?: emptyList(),
-                fallbackColors =
-                    when (val map = root.get<YamlMap>("fallback_colors")) {
-                        null -> emptyMap()
-                        else -> yaml.decodeFromYamlNode(map)
-                    },
-            )
+            return Config.create(nameWithExtension.removeSuffix(".yaml"))
         }
+    }
+
+    init {
+        Timber.i("Initializing current theme '$name'")
+        val config =
+            if (name != DEFAULT_THEME_NAME) {
+                deploy(name) ?: deploy(DEFAULT_THEME_NAME)
+            } else {
+                deploy(name)
+            } ?: Config()
+
+        liquid = Liquid(config)
+        keyboards = Keyboards(config)
+        generalStyle = mapToGeneralStyle(config)
+        fallbackColors = config.getMap("fallback_colors")
+        presetKeys = config.getMap("preset_keys")
+        presetColorSchemes = config.getMap("preset_color_schemes")
+        presetKeyboards = config.getMap("preset_keyboards")
+        Timber.i("The theme is initialized")
+        prefs.selectedTheme = name
+    }
+
+    private fun mapToGeneralStyle(config: Config): GeneralStyle {
+        val generalStyleMap = config.getMap("style")
+        val mapper = GeneralStyleMapper(generalStyleMap)
+        val generalStyle = mapper.map()
+
+        Timber.w(
+            "GeneralStyleMapper (%d) Warnings: %s",
+            mapper.errors.size,
+            mapper.errors.joinToString(","),
+        )
+        return generalStyle
+    }
+
+    class Liquid(private val config: Config) {
+        fun getInt(key: String): Int = config.getInt("liquid_keyboard/$key")
+
+        fun getFloat(key: String): Float = config.getFloat("liquid_keyboard/$key")
+
+        fun getList(key: String): ConfigList? = config.getList("liquid_keyboard/$key")
+
+        fun getMap(key: String): ConfigMap? = config.getMap("liquid_keyboard/$key")
+    }
+
+    class Keyboards(private val config: Config) {
+        fun getMap(key: String): ConfigMap? = config.getMap("preset_keyboards/$key")
     }
 }

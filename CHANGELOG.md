@@ -2,459 +2,6 @@
 
 All notable changes to this project will be documented in this file.
 
-## [3.3.5] - 2025-07-01
-
-### 🚀 Features
-
-- Implement Parcelable for theme classes
-
-### 🐛 Bug Fixes
-
-- Navigation bar blocked out the virtual keyboard (again)
-- Fix crash on inline suggestions response and improve ui
-- Malfunction of sound effect loading
-- Incorrect sound effect on press of some keys
-- Error on key custom color parsing
-- Custom key colors were transparent sometimes
-
-### 🚜 Refactor
-
-- Polish InputFeedbackManager
-- Enhance Kotlin-made config parser
-- Mapping theme to data classes
-
-### ⚙️ Miscellaneous Tasks
-
-- Bump version to 3.3.5
-- Upgrade gradle to 8.14.1
-- Add 3.3.5 changelog
-
-## [3.3.4] - 2025-05-01
-
-### 🐛 Bug Fixes
-
-- Couldn't load theme with over 200 anchors and aliases
-- Frequent exception on color parsing
-- Theme name in list might be empty
-- Potential uninitialized theme property exception
-- Fix the nightmode not working problems (#1633)
-- Fix boost file check
-
-### 🚜 Refactor
-
-- Show clear exception when failed to eval valid color scheme
-
-### ⚙️ Miscellaneous Tasks
-
-- Bump version to 3.3.4
-- Update librime-lua to e3912a4
-- Upgrade boost to 1.88.0
-- Upgrade runner to window-2025
-- Add 3.3.4 changelog
-
-## [3.3.3] - 2025-03-01
-
-### 🚀 Features
-
-- Clear text selection after copy
-- Add switch to not reset shift state for arrow keys
-- Set Trime to support inline suggestions for v30 onward
-- Add "autofill" library
-- Add logics & UIs for displaying inline suggestions
-- Add `CandidateModule` to encapsulate different candidate module
-- Add new `Suggestion` State to `QuickBarStateMachine`
-- Handle `onInlineSuggestion()` in `QuickBar` with `suggestionUi`
-- Request and handle inline suggestion in `TrimeInputMethodService`
-- Page navigation using prevIcon and nextIcon components
-- Add corner radius to highlighted candidate items in popup candidate window
-- Add setting to hide quick bar when always show candidates window
-- Notify on preference changes
-- Avoid crash loop
-- Allow users to trigger rime action via adb shell
-- Add setting option, schema switches debounce interval
-- Execute background sync work via WorkManager
-- All trime modifier keys, support long-press lock
-
-### 🐛 Bug Fixes
-
-- Do Not Send Key Event for NumPad Key
-- Notification/toast on RimeMessage will be popped up repeatedly
-- Shift + arrow keys not working to select text
-- Copy, cut keys not working when the shift key is locked
-- Edit action interceptor not working
-- Theme preset trime combination keys not working
-- Liquid keyboard symbollist not working
-- In drafts or collection tab of liquid keyboard, adapter data changes to clipboard after copying text
-- Liquid keyboard not regenerate data as expected after related view cache was destroyed
-- Clipboard update listener, not updating data as expected after copying existing text
-- Clipboard view cache exists, switching clipboards after copying text not update data to show newly copied content
-- Clipboard item text color not follow theme key text color
-- Liquid keyboard not auto-scrolling to top after data update
-- Composing key label not display and reset as expected
-- Force show mode, toggle switch options cannot update view
-- CurrentKeyboardView has not been initialized, causing crash
-- Key sequence cannot switch keyboards and commit partial text
-- Force show mode, candidates and window components show simultaneously (temp)
-- Key sequence cannot guide symbol and lua script mapping
-- Key sequence cannot parse theme preset keys with same name as key types
-- Setting ascii_mode to true in composing state causes symbol to be repeated commits
-- Labeled candidate item in CandidatesView couldn't break line correctly
-- Keyboard hides once click input box when the candidates window is always shown
-- NPE on key commands that to start activity with intent
-- Key preview not dismissed as expected
-- Schema switches would be processed twice
-- Key sequence not handling `commit` and `text` preset keys and not processed in order
-- Duplicated toast on deploy messaging (again)
-- *(jni)* Recreate rime session when necessary
-- Sending non-Android key events will commit "Not a Character" text
-- In `ascii_mode` and `ascii_punct` modes, symbols for which mapping has not been set in the scheme config will cannot be committed
-- *(jni)* Enabled schema list always showed the previous settings
-- *(daemon)* Use distinct notification IDs for deploy start/success/failure states
-- IMS didn't workaround null cursor anchor info correctly
-- Navbar color didn't change after changing theme or color
-- *(jni)* Potential crash on setting rime runtime options
-- Notification might not pop on screen by default
-- Key preview displays incorrect label
-- Space, number, symbol keys hook shift not working
-- No vibrate effect for candidates
-- Preset keys abbreviation not working
-- Key bindings not working for Shift + symbol
-- Crash when selecting new theme/color
-- Modifications to theme configs didn't take effect
-
-### 🚜 Refactor
-
-- Merge modifier state with the current keyboard's modifier state after sending combination keys
-- Simplify PrefMainActivity
-- Still handle rime deploy message in RimeDaemon
-- Add inline suggestions handling in `broadcaster`
-- Use `CandidateModule` instead and add `SuggestionCandidateModule` to receive event
-- Remove inject annotation in `CompactCandidateModule`
-- Remove rime keycode to unicode mapping
-- Remove unused delegated rime api
-- Remove redundant run state checking
-- Migrate `Rime.setOption` and `Rime.setCaretPos` to new api usage
-- Make clear how to get and expand active text for command express
-- Merge `schemaItemCached` and `inputStatusCached` into `statusCached`
-- Improve getting drawable from color schemes
-- Restore the candidate window background to previous settings
-- Polish candidates window settings wording
-- Polish (virtual) keyboard settings wording
-- Use rime dedicate api to change candidate page
-- Improve touch event receiving of stock PreeditUi
-- Improve touch event receiving of CandidatesView
-- Makeup a universal TouchEventReceiverWindow
-- Make sure CandidatesView positioning correct on first time showup
-- Make sure CandidatesView will not display overflow the screen
-- Update touchEventReceiverWindow's position after CandidatesView's
-- Simplify the setup of PageCandidatesUi's listeners
-- Extract CandidatesView's cursor anchor updating to IMS
-- Re-register intent receiver for IMS
-- Add helpers to manage levers api
-- Add helpers to transform candidate list
-- Pass version name to rime setup via JNI
-- Remove unused stuffs from `jni-utils.h`
-- Remove user config accesses when select schema or set option
-- *(jni)* Pack rime proto marshaling as rime c api
-- *(jni)* Use std::string_view as more as possible
-- Reduce nesting of KeyMessage in TrimeInputMethodService
-- New public createNotificationChannel util method
-- Replace logcat DSL with `subprocess`
-- Make custom proto apis comply with the original style
-- Improve CandidatesView's positioning
-- Adjust preedit ui setups and appearance
-- Remove show status bar icon settings
-- Remove deprecated setting fields in theme
-- Improve color/drawable resolving
-- *(config)* Add ConfigNull and ConfigTagged types
-- Cancel showing mini keyboard when use physical keyboard
-- Improve theme parsing
-- Rebuild theme setting delegates
-- Improve color scheme parsing
-- Remove deprecated theme setting fields from data classes
-
-### ⚙️ Miscellaneous Tasks
-
-- Bump version to 3.3.3
-- Bump librime to 1.13.0
-- Introduce AndroidX Work library
-- Update dependencies and toolchains
-- Upgrade spotless to 7.0.2
-- Upgrade gradle to 8.12.1
-- Upgrade librime to 1.13.1
-- Add 3.3.3 changelog
-
-### Build
-
-- Always overwrite files when install OpenCC data
-- Remove UseZGC option for gradle
-- Enable app shrinking for release build type
-- Add more app shrinking settings
-- Re-enable developers use file(s) to store sign key properties
-
-### Reforce
-
-- *(key)* Reduce redundant code, 'ascii' support 'send_bindings'
-
-## [3.3.2] - 2025-01-01
-
-### 🚀 Features
-
-- Add Android keycode to scancode mapping
-- Implement RimeKeyEvent
-- Replace Composition (view) with CandidatesView
-- Make new PreeditUi support moving cursor on touch
-- Integrate UI creation for PreferenceDelegate
-- Allow user to determine the candidates view mode
-- Add PageinationUi to indicate if candidates page has prev or next
-- Restore horizontal padding for candidate item in candidate window
-- Restore vertical layout in candidate window
-- Add keyval unicode mapping to process unhandled-by-librime key
-- Enhance physical keyboard support with candidates window
-- Show preedit ui on the top of bar when candidates window is disabled
-- New deploy user experience
-- Improve candidate item display
-- Improve switch display
-- Improve candidate window display
-
-### 🐛 Bug Fixes
-
-- Clipboard update not in time
-- Main keyboard view would disappear after switching schema
-- Back, Escape and Enter key action was handled before forward to librime
-- Space key always showed current schema name
-- Temporary workaround for duplicated return action (again)
-- Only the candidates of the first page could be selected in popup window
-- Reduce crash on flexboxlayout changing on candidates update
-- Keyboard view would be disappear after recreating input view
-- Workaround for some symbols cannot be committed
-- Make sure the window view height can always follow current keyboard height
-- Schema name on space bar didn't change after switching schema
-- Workaround for some text pattern cannot be simulated as key sequence
-- Wrong behavior on pressing return key on physical keyboard
-- Candidates window blocked the bar at first time showup
-- Regression that return key from physical keyboard would duplicate new line
-- Add missing highlighted candidate background
-- Crash on creating notification on deploy failure on Android 12+
-- `KP_*` would be processed twice
-
-### 🚜 Refactor
-
-- Replace SimpleKeyItemBinding with SimpleItemUi
-- Transform FlexibleAdapter with BaseDifferAdapter
-- Remove deprecated and unused api
-- Update key processing api usage
-- Utilize scancode to improve key event handling
-- Tell key processing API if the system key event is ACTION_UP
-- Rename Event to KeyAction
-- Polish the code of KeyAction
-- Reduce redundant nesting during key processing
-- Rename KeyEventType to KeyBehavior
-- Remove unused override `onWindowShown/Hidden` in TrimeInputMethodService
-- Relocate the files in candidates
-- Rename InlinePreeditMode to ComposingTextMode and set DISABLED as default value
-- Remove deprecated string res and preference items
-- Try to clean up the code in KeyboardView
-- Make Keyboard as KeyboardView a primary constructor's parameters
-- Cleanup for keyboard drawing in KeyboardView
-- Remove deprecated popup keyboard stuffs in KeyboardView
-- Clean up the code of Key and Keyboard
-- Replace LeakGuardHandlerWrapper with coroutines
-- Improve cursor following of candidate window
-- Remove scancode mapping
-- Judge key up state by modifiers
-- Remove deprecated GraphicUtils
-- Make candidates window can show at fixed position perfectly
-- Extract `showDialog` from InputView to IMS
-- Clean up `ShortcutUtils`
-- Split Utils.kt by function or receiver type
-- Slightly refine NinePatchBitmapFactory.kt
-- Remove unused resources
-- Bundle core native lib version name into BuildConfig
-- Improve user experience of settings pages
-- Correct preedit view behavior and polish its appearance
-- Remove librime charcode plugin
-- Remove iconv dependency
-- Merge RimeNotification and RimeEvent as RimeMessage
-- Try to improve the showing of the preedit view
-- Migrate DialogUtils to ProgressBarDialogIndeterminate
-- Remove speech recognition
-- Deprecate IMS instance getter
-- Constraint the text views' height in CandidateItemUi
-- Share the features of CandidateItemUi to SwitchUi
-
-### ⚙️ Miscellaneous Tasks
-
-- Bump version to 3.3.2
-- Upgrade librime to 1.12.0
-- Update librime to 1.12.0-1-gec40354
-- Upgrade ktlint to 1.5.0
-- Add 3.3.2 changelog
-
-### Build
-
-- Try to adjust gradle jvm arguments
-- Refactor build process
-
-## [3.3.1] - 2024-11-01
-
-### 🚀 Features
-
-- *(core)* Implements KeyValue and KeyModifier
-- Implement RimeEvent to hold events created by this frontend
-- Hide scroll bars of switcher view
-
-### 🐛 Bug Fixes
-
-- Switches weren't updated after switching schema
-- Shift action could not be committed when ascii mode is off
-- Unrolled candidates size was actually limited to about 144
-- Could not unroll the candidates somehow
-- Unrolled candidates size was still limited to about 144
-- Some symbols would be committed twice in full and half shape
-- Assets in sub directories ran out of its parent in dest path
-- Data checksums descriptor didn't copy correctly
-- Couldn't smart match the keyboard corresponding to the schema id
-- Forgot to invoke response handlers in Rime itself
-- Could not scroll down the unrolled candidates
-- Metrics of strings in RimeProto were not completely converted
-- Filter opencc data file
-- Ime could not response key event from physical keyboard (#1485)
-- Truncated composition view (#1479)
-- Duplicated characters in ascii mode
-- Popup composition view blocked the bar view at first show
-- Duplicated line breaks
-
-### 🚜 Refactor
-
-- "pack" the text and comment view so that they are as centered as possible
-- Slightly shorten the default animation duration
-- Never fill the width of the candidate item view
-- Make the candidate text always in center while ...
-- Truncate the candidate at the end if the text is too long
-- Improve key event forwarding
-- Split out KeyboardActionListener from KeyboardView
-- Split out CommonKeyboardActionListener from TextInputManager
-- Make unrolled candidate view high customizable
-- Remove useless/unused keyboard settings
-- Split out EnterKeyLabelModule from KeyboardView
-- Remove debounce when selecting candidates in the compat view
-- *(api)* Update context in rime engine lifecycle looper
-- *(ime)* Merge TextInputManager into TrimeInputMethodService
-- Handle window switching in input(view) scope as more as possible
-- *(ime)* Reduce redundant text committing functions
-- Always pass the copy of the active theme to the views ...
-- Enhance the process of theme switching
-- Optimize timing background sync
-- Move on result action into FolderPickerPreference
-- Drop unnecessary data dir change listeners
-- Cleanup the process of handling rime response inside Rime
-- Enhance rime notification handling
-- Merge notification flow and response flow as callback flow
-- Move RimeResponse into RimeEvent as IpcResponse(Event)
-- Improve the build of spanned composition
-- Transform LiquidTabsUi with RecyclerView
-
-### ⚙️ Miscellaneous Tasks
-
-- Bump version to 3.3.1
-- Remove google java format
-- Upgrade ktlint to 1.3.1
-- Format with ktlint 1.3.1
-- Ignore code format patches within git blame
-- Share copyright profile
-- Update native dependencies
-- Upgrade opencc data
-- Update development guide [skip ci]
-- Add OpenCC data install path to gitignore
-- Update librime to 1.11.2-39-gb74f5fa0
-- Switch to macOS 15 runner
-- Add 3.3.1 changelog
-
-### Build
-
-- Implement OpenCCDataPlugin to install OpenCC data
-- Remove rules for installing OpenCC data in Makefile
-- Fix deprecated function usage
-
-## [3.3.0] - 2024-09-01
-
-### 🚀 Features
-
-- Internal shared data directory
-- Builtin prelude files
-- Initial implementation of SwitchesUi
-- Add runtime option setter and getter to new api interface
-- *(jni)* Use NewString to create jstring
-- *(jni)* Add getRimeCandidates API
-- *(jni)* Add selectRimeCanidate and forgetRimeCandidate APIs
-- *(api)* Initial implementation of emitting rime response via shared flow
-- Update composing text via rime response flow
-- Update candidates via rime response shared flow
-- Update composition via rime response shared flow
-- New (compact) candidate view using recyclerview
-- *(utils)* Introduce EventStateMachine
-- *(window)* Add default animation effect when enter or exit
-- Implements unrolled candidate view
-- Restore the highlight of the candidate
-
-### 🐛 Bug Fixes
-
-- Candidates are abnormally centered
-- 输入状态下切换深色模式时，悬浮窗无法关闭
-- Fix list is empty
-- 输入状态下切换配色，悬浮窗无法关闭
-- Error on access to user data dir especially on app first run
-- Ime could not follow the keyboard's ascii mode after switching
-- Switcher didn't update after switching to different ascii mode keyboard
-- Keyboard layout didn't switch in time on device's orientation changed
-- Couldn't back to appropriate keyboard layout from others at landscape mode
-- Keyboard layout sometimes inadvertently backed to the default layout
-- Timing sync (#1441)
-- Candidate view in LiquidKeyboard didn't show all bulk candidates
-- Key sequence could not be committed when ascii mode is on
-- Inaccurate left offset before the compact candidate view ...
-
-### 🚜 Refactor
-
-- Hide composition view on input view detached from window
-- Create main keyboard view without binding
-- Cancel jvm overloads on keyboard view
-- Rename SchemaListItem to SchemaItem
-- Add `schemaItemCached` and `currentSchema()` to Rime(Api)
-- Migrate KeyboardSwitcher features into KeyboardWindow
-- Slightly change the base data syncing logic
-- Move bar ui classes into ui package
-- Restore the style for SwitchesUi
-- Apply the new runtime option setter and getter as more as possible
-- Add STOPPING state for RimeLifecycle
-- Slightly improve the switches view
-- Migrate rime out data class into RimeProto
-- Adjust the data struct of RimeProto
-- Rename CandidateListItem to CandidateItem
-- Implements QuickBarStateMachine to drive UI update of QuickBar
-- Remove obsolete candidate view
-- Remove obsolete custom scroll view
-- Remove unused api functions
-- Rename CandidateAdapter to VarLengthAdapter
-- Remove unused preference entries
-
-### 📚 Documentation
-
-- Add SPDX license header with reuse
-
-### ⚙️ Miscellaneous Tasks
-
-- Bump version to 3.3.0
-- Use form for issue template
-- Checkout submodules recursively on pull request and commit
-- Disable layout update animations.
-- Introduce BRAVH library
-- Update librime to 1.11.2-27-gcdab8936
-- Introduce AndroidX Paging library
-- Upgrade gradle to 8.10
-- Add 3.3.0 changelog
-
 ## [3.2.19] - 2024-06-30
 
 ### 🚀 Features
@@ -521,7 +68,6 @@ All notable changes to this project will be documented in this file.
 
 - Add missing license header
 - Add missing SPDX header
-- Add 3.2.19 change log
 
 ### ⚡ Performance
 
@@ -2461,6 +2007,14 @@ All notable changes to this project will be documented in this file.
 
 ## [3.0] - 2017-01-04
 
+### #33
+
+- Android 6.0 上請求讀寫權限
+
+### #5
+
+- 使用Clear或Escape清屏
+
 ### 🚀 Features
 
 - *(jni)* Save option
@@ -2510,6 +2064,16 @@ All notable changes to this project will be documented in this file.
 - Remove duplicated Chinese trime file
 - Dynamic version code according to commit number
 
+### Fix
+
+- Func name error
+- Destroy F4 menu when escape
+- Destroy F4 menu when back
+
+### Workaround
+
+- Deploy message error
+
 ### Candidate_padding
 
 - 內邊距
@@ -2528,8 +2092,40 @@ All notable changes to this project will be documented in this file.
 - *(jni)* Update librime
 - Dynamic version name and code
 
+### Cmake
+
+- Fix android clang
+- Add opencc tools
+- Add boost thread for win32
+
+### Code
+
+- Prior 隱藏鍵盤
+
+### GetSelectLabels
+
+- 候選標籤
+
 ### Jni
 
+- Set android-4
+- Add miniglog
+- Add arm64-v8a support
+- Fix ld error
+- Update opencc to 1.0.3
+- Use local librime for Android
+- Fix get_version null pointer error
+- Rename to rime_jni.cc
+- 保存最近方案
+- Update opencc
+- Opencc
+- Update boost & snappy
+- Default no use boost signals2
+- Modular
+- Update librime
+- Opencc dynamic lib
+- Add libiconv 1.14
+- Update makefile
 - Update yaml-cpp to 0.5.3
 - Update librime
 - Fix for ndk r11
@@ -2572,6 +2168,11 @@ All notable changes to this project will be documented in this file.
 
 - 解決rime_console編譯問題
 
+### Make
+
+- Add ndk-build to ant
+- Add lint
+
 ### Proximity_correction
 
 - 按鍵糾錯
@@ -2582,6 +2183,14 @@ All notable changes to this project will be documented in this file.
 
 ### Travis
 
+- Submodules
+- Install
+- Add ndk
+- Reduce log
+- Prebuilt ndk libs
+- Android-23
+- Script
+- Use gradle
 - Fix build break and add ant lint
 
 ### Win
@@ -2596,101 +2205,20 @@ All notable changes to this project will be documented in this file.
 
 - Auto_caps
 
-### 按鍵單獨顏色或標籤
-
-- Key_text_color、key_back_color
-
-### 默認空格右滑（Schema_switch
-
-- Control+Shift+1）切換到下一方案
-
-## [3.0-beta2] - 2016-01-11
-
-### #33
-
-- Android 6.0 上請求讀寫權限
-
-### Cmake
-
-- Fix android clang
-- Add opencc tools
-- Add boost thread for win32
-
-### Code
-
-- Prior 隱藏鍵盤
-
-### GetSelectLabels
-
-- 候選標籤
-
-### Jni
-
-- Update opencc to 1.0.3
-- Use local librime for Android
-- Fix get_version null pointer error
-- Rename to rime_jni.cc
-- 保存最近方案
-- Update opencc
-- Opencc
-- Update boost & snappy
-- Default no use boost signals2
-- Modular
-- Update librime
-- Opencc dynamic lib
-- Add libiconv 1.14
-- Update makefile
-
-### Make
-
-- Add ndk-build to ant
-- Add lint
-
-### Travis
-
-- Submodules
-- Install
-- Add ndk
-- Reduce log
-- Prebuilt ndk libs
-- Android-23
-- Script
-- Use gradle
-
 ### 命令直通車
 
 - Run
+
+### 按鍵單獨顏色或標籤
+
+- Key_text_color、key_back_color
 
 ### 默認send_bindings
 
 - True
 
-## [3.0-beta] - 2015-07-24
+### 默認空格右滑（Schema_switch
 
-### #5
-
-- 使用Clear或Escape清屏
-
-### Fix
-
-- Func name error
-- Destroy F4 menu when escape
-- Destroy F4 menu when back
-
-### Workaround
-
-- Deploy message error
-
-### Jni
-
-- Add arm64-v8a support
-- Fix ld error
-
-## [3.0-alpha] - 2015-07-06
-
-### Jni
-
-- Set android-4
-- Add miniglog
+- Control+Shift+1）切換到下一方案
 
 <!-- generated by git-cliff -->

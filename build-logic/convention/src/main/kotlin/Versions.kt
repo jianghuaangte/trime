@@ -2,9 +2,15 @@
 //
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-object Versions {
-    const val DEFAULT_CMAKE = "3.31.6"
-    const val DEFAULT_NDK = "28.0.13004108"
+import org.gradle.api.Project
 
-    val supportedAbis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+object Versions {
+    private const val DEFAULT_CMAKE = "3.22.1"
+    private const val DEFAULT_NDK = "25.2.9519653"
+
+    val Project.cmakeVersion
+        get() = envOrProp("CMAKE_VERSION", "cmakeVersion") { DEFAULT_CMAKE }
+
+    val Project.ndkVersion
+        get() = envOrProp("NDK_VERSION", "ndkVersion") { DEFAULT_NDK }
 }
