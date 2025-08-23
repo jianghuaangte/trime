@@ -3375,11 +3375,15 @@ preset_keys:
   Cixuan: {label: 次选, send: 2}
 
   # 剪贴板
+  liquid_keyboard_exit: {label: 返回, send: function, command: liquid_keyboard, option: "-1"}  #退出liquidkeyboard
+  space1: {repeatable: false, label: '空格', functional: false, send: space}
+  BackSpace: {label: 退格, preview: '⇦', repeatable: true, functional: false, send: BackSpace}
+  Return2: {label: 回车, send: Return }
   liquid_keyboard_switch: { label: 更多, send: function, command: liquid_keyboard, option: "特殊" }
   liquid_keyboard_switch2: { toggle: _liquid_keyboard, send: Mode_switch, states: [ 更多, 更多 ] }
   liquid_keyboard_tabs: { label: 更多, send: function, command: liquid_keyboard, option: "更多" }
   liquid_keyboard_emoji: { label: 🙂, send: function, command: liquid_keyboard, option: "emoji" }
-  liquid_keyboard_clipboard: { label: 剪贴, send: function, command: liquid_keyboard, option: "剪贴" }
+  liquid_keyboard_clipboard: { label: ⏍, send: function, command: liquid_keyboard, option: "剪贴" }
 
   # 虚拟行第6行设置
   IME_switch: {label: '⌨', functional: false, send: LANGUAGE_SWITCH}
